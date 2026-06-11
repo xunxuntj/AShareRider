@@ -236,7 +236,7 @@ function parseSinaSuggestText(text) {
         const parts = rec.split(',');
         if (parts.length < 6) return null;
         
-        const name = parts[0];
+        const name = parts[4] || parts[0];
         const codeNum = parts[2];
         const marketCode = parts[3]; // sh600519 or sz300750
         

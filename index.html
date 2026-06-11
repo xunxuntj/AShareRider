@@ -165,6 +165,9 @@
 
         <!-- 3. 游戏关卡骑行页面 -->
         <div id="game-screen" class="screen">
+            <!-- 主物理渲染 Canvas -->
+            <canvas id="game-canvas"></canvas>
+
             <!-- 顶部 HUD 通栏 -->
             <div class="hud-bar">
                 <div class="hud-panel">
@@ -200,9 +203,6 @@
                     <button id="game-mute-btn" class="btn" style="padding: 6px 12px; font-size: 12px;">🔊 声音</button>
                 </div>
             </div>
-
-            <!-- 主物理渲染 Canvas -->
-            <canvas id="game-canvas"></canvas>
 
             <!-- 键盘按键引导提示 (桌面端可见) -->
             <div class="controls-guide-hud">

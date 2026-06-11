@@ -507,38 +507,49 @@ async function reloadPreviewData() {
     try {
         activeStockData = await fetchStockData(currentStockCode, currentPeriod, currentStockSecid);
         if (activeStockData) {
-            // 如果 API 返回了真实的中文字符，且当前记录的名称是自选降级名，应更新为真实名称
-            if (activeStockData.name && activeStockData.name !== "未知股票" && !activeStockData.name.startsWith("自选股票")) {
+            const hasValidActiveName = activeStockData.name && 
+                                       activeStockData.name !== "未知股票" && 
+                                       !activeStockData.name.startsWith("自选股票") && 
+                                       !activeStockData.name.startsWith("sh") && 
+                                       !activeStockData.name.startsWith("sz") &&
+                                       !activeStockData.name.startsWith("bj");
+
+            if (hasValidActiveName) {
                 currentStockName = activeStockData.name;
                 document.getElementById('preview-stock-name').textContent = currentStockName;
                 updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
             } else {
-                // 如果目前的名字是自选降级名，我们尝试通过联想接口(JSONP)异步查询其真实中文名字
-                if (!currentStockName || currentStockName.startsWith("自选股票") || activeStockData.name.startsWith("自选股票")) {
+                const hasValidCurrentName = currentStockName && 
+                                            !currentStockName.startsWith("自选股票") && 
+                                            !currentStockName.startsWith("sh") && 
+                                            !currentStockName.startsWith("sz") &&
+                                            !currentStockName.startsWith("bj");
+
+                if (hasValidCurrentName) {
+                    activeStockData.name = currentStockName;
+                    document.getElementById('preview-stock-name').textContent = currentStockName;
+                    const hudNameEl = document.getElementById('hud-stock-name');
+                    if (hudNameEl) hudNameEl.textContent = currentStockName;
+                    updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
+                } else {
                     searchStocks(currentStockCode).then(results => {
                         if (results && results.length > 0) {
-                            // 查找精准匹配代码的项
                             const found = results.find(r => {
                                 if (currentStockSecid && r.secid) {
                                     return r.secid === currentStockSecid;
                                 }
                                 return r.code === currentStockCode;
                             });
-                            if (found && found.name) {
+                            if (found && found.name && !found.name.startsWith("sh") && !found.name.startsWith("sz") && !found.name.startsWith("bj")) {
                                 currentStockName = found.name;
                                 activeStockData.name = currentStockName;
                                 document.getElementById('preview-stock-name').textContent = currentStockName;
-                                // 同时也同步更新 HUD 展示
                                 const hudNameEl = document.getElementById('hud-stock-name');
                                 if (hudNameEl) hudNameEl.textContent = currentStockName;
                                 updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
                             }
                         }
                     }).catch(err => console.warn("异步修正股票名称失败:", err));
-                }
-                
-                if (currentStockName) {
-                    activeStockData.name = currentStockName;
                 }
             }
         }
@@ -765,31 +776,45 @@ if (hudTimerInterval) clearInterval(hudTimerInterval);
 setInterval(() => {
     const screen = document.getElementById('game-screen');
     if (screen && screen.classList.contains('active') && gameController && gameController.bike) {
-        // 1. 更新计时器
-        const time = gameController.timeElapsed;
-        const min = Math.floor(time / 60);
-        const sec = Math.floor(time % 60);
-        const ms = Math.floor((time % 1) * 10);
-        document.getElementById('hud-timer').textContent = `${min}:${String(sec).padStart(2, '0')}.${ms}`;
+        try {
+            // 1. 更新计时器
+            const time = gameController.timeElapsed || 0;
+            const min = Math.floor(time / 60);
+            const sec = Math.floor(time % 60);
+            const ms = Math.floor((time % 1) * 10);
+            const timerEl = document.getElementById('hud-timer');
+            if (timerEl) {
+                timerEl.textContent = `${min}:${String(sec).padStart(2, '0')}.${ms}`;
+            }
 
-        // 2. 更新对应股价
-        const bikeX = gameController.bike.getX();
-        const pts = gameController.trackPoints;
-        const totalX = pts[pts.length - 1].x;
-        const ratioX = Math.max(0, Math.min(1.0, bikeX / totalX));
-        const idx = Math.min(pts.length - 1, Math.floor(ratioX * (pts.length - 1)));
-        
-        const currPoint = pts[idx];
-        const nextPoint = pts[idx + 1] || currPoint;
+            // 2. 更新对应股价
+            const bikeX = gameController.bike.getX() || 0;
+            const pts = gameController.trackPoints;
+            if (!pts || pts.length === 0) return;
+            
+            const lastPoint = pts[pts.length - 1];
+            if (!lastPoint) return;
+            const totalX = lastPoint.x || 1;
+            const ratioX = Math.max(0, Math.min(1.0, bikeX / totalX));
+            const idx = Math.min(pts.length - 1, Math.floor(ratioX * (pts.length - 1)));
+            
+            const currPoint = pts[idx];
+            if (currPoint) {
+                const nextPoint = pts[idx + 1] || currPoint;
+                const isUp = nextPoint.price >= currPoint.price;
+                const priceEl = document.getElementById('hud-price');
+                if (priceEl) {
+                    priceEl.textContent = `¥${currPoint.price.toFixed(2)}`;
+                    priceEl.style.color = isUp ? 'var(--neon-red)' : 'var(--neon-green)';
+                    priceEl.style.textShadow = isUp ? '0 0 8px var(--neon-red-glow)' : '0 0 8px var(--neon-green-glow)';
+                }
+            }
 
-        const isUp = nextPoint.price >= currPoint.price;
-        const priceEl = document.getElementById('hud-price');
-        priceEl.textContent = `¥${currPoint.price.toFixed(2)}`;
-        priceEl.style.color = isUp ? 'var(--neon-red)' : 'var(--neon-green)';
-        priceEl.style.textShadow = isUp ? '0 0 8px var(--neon-red-glow)' : '0 0 8px var(--neon-green-glow)';
-
-        // 3. 更新 HUD 迷你地图及骑手位置
-        drawHUDMinimap(gameController, ratioX);
+            // 3. 更新 HUD 迷你地图及骑手位置
+            drawHUDMinimap(gameController, ratioX);
+        } catch (err) {
+            console.error("HUD 定时更新异常:", err);
+        }
     }
 }, 100);
 
@@ -1011,8 +1036,8 @@ function recordStockPlay(code, name, secid, klines) {
     if (track) {
         track.count = (track.count || 0) + 1;
         track.lastPlayed = Date.now();
-        // 确保使用真实的中文股票名称，而不是“自选股票 + 代码”
-        if (name && name !== "未知股票" && !name.startsWith("自选股票")) {
+        // 确保使用真实的中文股票名称，而不是“自选股票 + 代码”或 "shxxxx" Market Code
+        if (name && name !== "未知股票" && !name.startsWith("自选股票") && !name.startsWith("sh") && !name.startsWith("sz") && !name.startsWith("bj")) {
             track.name = name;
         }
         if (secid) {
@@ -1023,8 +1048,13 @@ function recordStockPlay(code, name, secid, klines) {
         const diffInfo = getStockDifficulty(klines);
         const isSH = code.startsWith("6") || code.startsWith("9") || code.startsWith("5") || code === "000001" || code === "000300";
         
+        let displayName = name;
+        if (!displayName || displayName.startsWith("自选股票") || displayName.startsWith("sh") || displayName.startsWith("sz") || displayName.startsWith("bj")) {
+            displayName = `自选股票 ${code}`;
+        }
+
         track = {
-            name: name || `自选股票 ${code}`,
+            name: displayName,
             code: code,
             market: isSH ? 1 : 0,
             secid: secid || (isSH ? `1.${code}` : `0.${code}`),
@@ -1037,6 +1067,8 @@ function recordStockPlay(code, name, secid, klines) {
         };
         tracks.push(track);
     }
+    
+    console.log("[Trending] Recorded play for:", code, track.name, "new count:", track.count);
     
     // 保存回 localStorage
     localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
@@ -1076,10 +1108,12 @@ function getStockDifficulty(klines) {
 function getTrendingTracks() {
     const saved = localStorage.getItem('stonkrider_trending_tracks');
     let tracks = [];
+    let needsMigrationSave = false;
     if (saved) {
         try {
             tracks = JSON.parse(saved);
             tracks = tracks.map((t, idx) => {
+                let updated = false;
                 if (t.lastPlayed === undefined) {
                     t.lastPlayed = Date.now() - (idx * 24 * 60 * 60 * 1000);
                     if (t.isPreset) {
@@ -1088,10 +1122,17 @@ function getTrendingTracks() {
                             t.count = 5 - presetIdx;
                         }
                     }
+                    updated = true;
+                    needsMigrationSave = true;
                 }
                 const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
                 if (preset) {
-                    return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
+                    const nextSecidFull = preset.secid_full || preset.secid;
+                    if (t.secid !== preset.secid || t.secid_full !== nextSecidFull) {
+                        t.secid = preset.secid;
+                        t.secid_full = nextSecidFull;
+                        needsMigrationSave = true;
+                    }
                 }
                 return t;
             });
@@ -1107,6 +1148,10 @@ function getTrendingTracks() {
             lastPlayed: Date.now() - idx * 60 * 1000,
             isPreset: true
         }));
+        needsMigrationSave = true;
+    }
+
+    if (needsMigrationSave) {
         localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
     }
     
@@ -1194,66 +1239,72 @@ function drawHUDMinimap(game, ratioX) {
     const canvas = document.getElementById('hud-minimap');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.clientWidth || 180;
-    const h = canvas.height = canvas.clientHeight || 20;
+    
+    // 使用固定的 180x20 分辨率，契合 CSS 中定宽高的容器，彻底规避 clientWidth/clientHeight 获取为 0 的布局时序 Bug
+    const w = canvas.width = 180;
+    const h = canvas.height = 20;
     
     const pts = game.trackPoints;
     if (!pts || pts.length < 2) return;
     
-    ctx.clearRect(0, 0, w, h);
-    
-    // 1. 提取所有点的高度并归一化价格波动范围
-    const prices = pts.map(p => p.price);
-    const maxP = Math.max(...prices);
-    const minP = Math.min(...prices);
-    const range = maxP - minP || 1;
-    
-    // 2. 绘制整个赛道背景辅助折线 (半透明淡灰)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    
-    for (let i = 0; i < pts.length; i++) {
-        const x = (i / (pts.length - 1)) * w;
-        const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
-    }
-    ctx.stroke();
-    
-    // 3. 绘制玩家已骑行通过的轨迹 (高亮霓虹蓝)
-    ctx.strokeStyle = '#00f0ff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const currentIdx = Math.floor(ratioX * (pts.length - 1));
-    for (let i = 0; i <= currentIdx; i++) {
-        const x = (i / (pts.length - 1)) * w;
-        const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
-    }
-    ctx.stroke();
-    
-    // 4. 绘制玩家当前所在的位置指示点 (发光红色圆点)
-    if (currentIdx >= 0 && currentIdx < pts.length) {
-        const currentPt = pts[currentIdx];
-        const dotX = ratioX * w;
-        const dotY = h - 4 - ((currentPt.price - minP) / range) * (h - 8);
+    try {
+        ctx.clearRect(0, 0, w, h);
         
-        ctx.fillStyle = '#ff3366';
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = '#ff3366';
+        // 1. 提取所有点的高度并归一化价格波动范围
+        const prices = pts.map(p => p.price);
+        const maxP = Math.max(...prices);
+        const minP = Math.min(...prices);
+        const range = maxP - minP || 1;
+        
+        // 2. 绘制整个赛道背景辅助折线 (半透明淡灰)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0; // 还原 shadow 防止影响后续绘图
+        
+        for (let i = 0; i < pts.length; i++) {
+            const x = (i / (pts.length - 1)) * w;
+            const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+        
+        // 3. 绘制玩家已骑行通过的轨迹 (高亮霓虹蓝)
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const currentIdx = Math.max(0, Math.min(pts.length - 1, Math.floor(ratioX * (pts.length - 1))));
+        for (let i = 0; i <= currentIdx; i++) {
+            const x = (i / (pts.length - 1)) * w;
+            const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+        
+        // 4. 绘制玩家当前所在的位置指示点 (发光红色圆点)
+        if (currentIdx >= 0 && currentIdx < pts.length) {
+            const currentPt = pts[currentIdx];
+            const dotX = ratioX * w;
+            const dotY = h - 4 - ((currentPt.price - minP) / range) * (h - 8);
+            
+            ctx.fillStyle = '#ff3366';
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = '#ff3366';
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // 还原 shadow
+        }
+    } catch (err) {
+        console.error("绘制 HUD 小地图异常:", err);
     }
 }
