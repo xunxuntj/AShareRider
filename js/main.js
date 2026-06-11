@@ -449,6 +449,10 @@ function switchScreen(screenId) {
     if (target) {
         target.classList.add('active');
     }
+
+    if (screenId === 'home-screen') {
+        renderTrendingTracks();
+    }
 }
 
 /**
