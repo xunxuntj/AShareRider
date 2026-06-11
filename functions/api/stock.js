@@ -59,7 +59,7 @@ export async function onRequestGet(context) {
                 let resolvedSecid = "";
                 if (marketCode.startsWith("sh")) {
                     resolvedSecid = `1.${codeNum}`;
-                } else if (marketCode.startsWith("sz")) {
+                } else if (marketCode.startsWith("sz") || marketCode.startsWith("bj")) {
                     resolvedSecid = `0.${codeNum}`;
                 } else {
                     return null; // 其他市场暂不支持
