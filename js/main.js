@@ -849,8 +849,16 @@ async function submitScoreToLeaderboard() {
                 statusMsg.style.color = "var(--neon-green)";
                 nickInput.disabled = true;
             } else {
-                const errJson = await response.json();
-                statusMsg.textContent = `❌ 提交失败: ${errJson.error || '服务器错误'}`;
+                let errMsg = '服务器错误';
+                try {
+                    const errJson = await response.json();
+                    errMsg = errJson.error || errMsg;
+                } catch (jsonErr) {
+                    try {
+                        errMsg = await response.text() || errMsg;
+                    } catch (txtErr) {}
+                }
+                statusMsg.textContent = `❌ 提交失败 (${response.status}): ${errMsg}`;
                 statusMsg.style.color = "var(--neon-red)";
                 submitBtn.disabled = false;
                 submitBtn.textContent = "⚡ 提交";
@@ -858,7 +866,7 @@ async function submitScoreToLeaderboard() {
         } catch (e) {
             console.warn("网络异常，降级提交至本地:", e);
             saveScoreLocally(payload);
-            statusMsg.textContent = "⚠️ 网络不可用，成绩已记入本地！";
+            statusMsg.textContent = "⚠️ 网络链接失败，成绩已记入本地！";
             statusMsg.style.color = "#faad14";
             nickInput.disabled = true;
         }
