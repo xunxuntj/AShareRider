@@ -61,38 +61,38 @@ export async function fetchStockData(code, period = '1Y', secid = '') {
  */
 export async function searchStocks(keyword) {
     if (!keyword || keyword.trim() === "") return [];
-    
-    const isLocal = window.location.protocol === 'file:';
 
-    if (isLocal && !window.forceCloudflareAPI) {
-        // 本地离线环境只返回几个预设的匹配
-        const presets = [
-            { code: "000001", name: "平安银行", secid: "0.000001" },
-            { code: "000001", name: "上证指数", secid: "1.000001" },
-            { code: "600519", name: "贵州茅台", secid: "1.600519" },
-            { code: "002594", name: "比亚迪", secid: "0.002594" },
-            { code: "300750", name: "宁德时代", secid: "0.300750" },
-            { code: "300059", name: "东方财富", secid: "0.300059" }
-        ];
-        return presets.filter(s => s.code.includes(keyword) || s.name.includes(keyword));
-    }
-
+    // 1. 首先尝试请求 Cloudflare Serverless Function 代理 (如果在已部署的线上环境)
     try {
         const response = await fetch(`/api/stock?search=${encodeURIComponent(keyword)}`);
-        if (!response.ok) throw new Error("Search failed");
-        return await response.json();
+        if (response.ok) {
+            return await response.json();
+        }
     } catch (err) {
-        console.warn(`[API] 搜索请求失败，降级本地匹配: ${err.message}`);
-        const presets = [
-            { code: "000001", name: "平安银行", secid: "0.000001" },
-            { code: "000001", name: "上证指数", secid: "1.000001" },
-            { code: "600519", name: "贵州茅台", secid: "1.600519" },
-            { code: "002594", name: "比亚迪", secid: "0.002594" },
-            { code: "300750", name: "宁德时代", secid: "0.300750" },
-            { code: "300059", name: "东方财富", secid: "0.300059" }
-        ];
-        return presets.filter(s => s.code.includes(keyword) || s.name.includes(keyword));
+        console.warn(`[API] 联机代理搜索接口不可用: ${err.message}`);
     }
+
+    // 2. 如果代理接口不可用 (例如本地 http.server 静态运行)，则尝试直接通过浏览器 JSONP 跨域请求新浪接口
+    try {
+        console.log(`[API] 正在尝试通过 JSONP 跨域请求新浪实时搜索接口...`);
+        const results = await fetchSinaSuggestJSONP(keyword);
+        if (results && results.length > 0) {
+            return results;
+        }
+    } catch (err) {
+        console.warn(`[API] JSONP 跨域搜索失败: ${err.message}`);
+    }
+
+    // 3. 终极兜底：使用本地预设的热门股票匹配
+    const presets = [
+        { code: "000001", name: "平安银行", secid: "0.000001" },
+        { code: "000001", name: "上证指数", secid: "1.000001" },
+        { code: "600519", name: "贵州茅台", secid: "1.600519" },
+        { code: "002594", name: "比亚迪", secid: "0.002594" },
+        { code: "300750", name: "宁德时代", secid: "0.300750" },
+        { code: "300059", name: "东方财富", secid: "0.300059" }
+    ];
+    return presets.filter(s => s.code.includes(keyword) || s.name.includes(keyword));
 }
 
 /**
@@ -169,4 +169,88 @@ export function smoothPrices(klines, windowSize = 5) {
         });
     }
     return result;
+}
+
+/**
+ * 通过 JSONP 方式跨域请求新浪的股票搜索自动联想接口 (支持本地/无 Proxy 运行)
+ * @param {string} keyword
+ * @returns {Promise<Array>}
+ */
+function fetchSinaSuggestJSONP(keyword) {
+    return new Promise((resolve, reject) => {
+        const callbackName = `sina_suggest_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const script = document.createElement('script');
+        
+        // 新浪搜索建议接口支持通过 name 参数自定义全局变量名，借此实现跨域读取
+        script.src = `https://suggest3.sinajs.cn/suggest/type=11,12,31&key=${encodeURIComponent(keyword)}&name=${callbackName}`;
+        script.async = true;
+        
+        const timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error("Sina suggest JSONP request timeout"));
+        }, 4000);
+        
+        function cleanup() {
+            clearTimeout(timeout);
+            script.remove();
+            try {
+                delete window[callbackName];
+            } catch (e) {}
+        }
+        
+        script.onload = () => {
+            const dataStr = window[callbackName];
+            cleanup();
+            if (typeof dataStr !== 'string') {
+                reject(new Error("Invalid JSONP response"));
+                return;
+            }
+            try {
+                const results = parseSinaSuggestText(dataStr);
+                resolve(results);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        
+        script.onerror = (err) => {
+            cleanup();
+            reject(new Error("JSONP script load error"));
+        };
+        
+        document.body.appendChild(script);
+    });
+}
+
+/**
+ * 解析新浪 suggest3 接口返回的原始文本格式为对象数组
+ * 格式: "平安银行,11,000001,sz000001,平安银行,payh;..."
+ */
+function parseSinaSuggestText(text) {
+    if (!text) return [];
+    const rawRecords = text.split(';');
+    return rawRecords.map(rec => {
+        const parts = rec.split(',');
+        if (parts.length < 6) return null;
+        
+        const name = parts[0];
+        const codeNum = parts[2];
+        const marketCode = parts[3]; // sh600519 or sz300750
+        
+        let resolvedSecid = "";
+        if (marketCode.startsWith("sh")) {
+            resolvedSecid = `1.${codeNum}`;
+        } else if (marketCode.startsWith("sz") || marketCode.startsWith("bj")) {
+            resolvedSecid = `0.${codeNum}`;
+        } else {
+            return null; // 过滤非 A 股其他市场
+        }
+
+        return {
+            name: name,
+            code: codeNum,
+            secid: resolvedSecid,
+            market: marketCode.startsWith("sh") ? 1 : 0
+        };
+    }).filter(item => item !== null);
 }
