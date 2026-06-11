@@ -328,6 +328,11 @@ function setupUIListeners() {
         }
     });
 
+    // 平滑度拖动释放后，重新载入对应排行榜
+    smoothSlider.addEventListener('change', () => {
+        loadLeaderboard();
+    });
+
     // E. 启动骑行挑战按钮
     document.getElementById('start-ride-btn').addEventListener('click', () => {
         if (!activeStockData) return;
