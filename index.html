@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A股骑士 - 炒股不如骑摩托 | StonkRider A-Shares</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- 1. 主菜单页面 -->
+        <div id="home-screen" class="screen active">
+            <div class="home-content">
+                <!-- 品牌标志 -->
+                <div class="brand-section">
+                    <h1 class="brand-title">STONK RIDER</h1>
+                    <div class="brand-subtitle">A 股 骑 士 · 炒 股 不 如 骑 摩 托</div>
+                </div>
+
+                <!-- 个人成就统计卡片 -->
+                <div class="lifetime-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">总骑行次数</div>
+                        <div id="stat-rides" class="stat-val" style="color: var(--neon-cyan)">0</div>
+                    </div>
+                    <div id="stat-profit-card" class="stat-card">
+                        <div class="stat-label">历史总得分</div>
+                        <div id="stat-profit" class="stat-val" style="color: var(--neon-gold)">0 pts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">总摔车次数</div>
+                        <div id="stat-crashes" class="stat-val" style="color: var(--neon-red)">0</div>
+                    </div>
+                </div>
+
+                <!-- 股票代码搜索栏 -->
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="stock-search-input" class="search-input" placeholder="输入股票代码 / 中文名称 / 拼音首字母 (如 600519 或 茅台)..." autocomplete="off">
+                        <button id="search-clear-btn" class="btn search-btn">清除</button>
+                    </div>
+                    <!-- 搜索建议下拉列表 -->
+                    <div id="search-dropdown-menu" class="search-dropdown"></div>
+                </div>
+
+                <!-- 热门赛道推荐 -->
+                <div class="trending-section">
+                    <h2 class="tracks-section-title">
+                        <span style="color: var(--neon-cyan)">⚡</span> 热门推荐赛道 (Trending Tracks)
+                    </h2>
+                    <div id="trending-tracks-grid" class="tracks-grid">
+                        <!-- 动态生成的卡片列表 -->
+                    </div>
+                </div>
+                
+                <!-- 底部辅助说明及测试链接 -->
+                <div style="margin-top: 35px; text-align: center; font-size: 12px; color: var(--text-muted); border-top: 1px dashed rgba(74, 85, 104, 0.2); padding-top: 15px;">
+                    <span>键盘操作：W/S 加速刹车，A/D 平衡，Space 跳跃，R 复活</span>
+                    <span style="margin: 0 10px;">|</span>
+                    <a href="test.html" target="_blank" style="color: var(--neon-cyan); text-decoration: none; font-weight: bold; border: 1px solid rgba(0, 240, 255, 0.3); padding: 3px 8px; border-radius: 4px; background: rgba(0, 240, 255, 0.05); transition: all 0.2s ease; display: inline-block;">🛠️ 运行物理稳定性测试</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 赛道预览与参数调整页面 -->
+        <div id="level-preview-screen" class="screen">
+            <div class="preview-container">
+                <div class="preview-header">
+                    <button id="preview-back-btn" class="btn">← 返回主页</button>
+                    <div class="preview-title-group">
+                        <h2 id="preview-stock-name" class="preview-title">贵州茅台</h2>
+                        <div id="preview-stock-code" class="preview-subtitle">600519.SH</div>
+                    </div>
+                    <div id="preview-difficulty" class="difficulty-badge medium">Medium</div>
+                </div>
+
+                <!-- 配置面板 -->
+                <div class="options-panel">
+                    <!-- 行情时间段 -->
+                    <div class="option-group">
+                        <label class="option-label">行情范围 (Period)</label>
+                        <div class="btn-group" id="period-btn-group">
+                            <button class="btn-toggle" data-period="3M">3 个月</button>
+                            <button class="btn-toggle" data-period="6M">6 个月</button>
+                            <button class="btn-toggle active" data-period="1Y">1 年</button>
+                            <button class="btn-toggle" data-period="ALL">全部 (长赛道)</button>
+                        </div>
+                    </div>
+
+                    <!-- 平滑度设置 (移动平均线) -->
+                    <div class="option-group">
+                        <label class="option-label">赛道平滑降噪 (Smooth - 降低难度)</label>
+                        <div class="slider-container">
+                            <input type="range" id="smooth-range-slider" class="smooth-slider" min="1" max="20" value="1">
+                            <span id="smooth-slider-value" class="slider-val">OFF</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 股价波动赛道预览图 -->
+                <div class="preview-chart-wrapper">
+                    <canvas id="preview-sparkline-canvas" class="preview-chart"></canvas>
+                </div>
+
+                <!-- 行情物理指标统计 -->
+                <div class="track-metrics">
+                    <div class="metric-box">
+                        <div class="metric-lbl">总K线点数 (长度)</div>
+                        <div id="metric-points" class="metric-val" style="color: var(--neon-cyan)">0</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-lbl">区间最大波动</div>
+                        <div id="metric-volatility" class="metric-val" style="color: var(--neon-red)">0%</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-lbl">最大爬坡坡度</div>
+                        <div id="metric-slope" class="metric-val" style="color: #faad14">0°</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-lbl">历史涨跌幅</div>
+                        <div id="metric-change" class="metric-val">0%</div>
+                    </div>
+                </div>
+
+                <!-- 行动操作按钮 -->
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="start-ride-btn" class="btn btn-primary" style="padding: 15px 40px; font-size: 18px;">🏍️ 进入挑战 (Ride Chart)</button>
+                </div>
+
+                <!-- 当前赛道排行榜 -->
+                <div id="leaderboard-section">
+                    <div class="leaderboard-title">🏆 全球排行榜 Top 10 (本关配置)</div>
+                    <div class="leaderboard-panel">
+                        <div id="leaderboard-loading" style="text-align: center; padding: 20px; color: var(--text-muted);">正在加载排行榜数据...</div>
+                        <div id="leaderboard-list-container" class="leaderboard-list" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 游戏关卡骑行页面 -->
+        <div id="game-screen" class="screen">
+            <!-- 顶部 HUD 通栏 -->
+            <div class="hud-bar">
+                <div class="hud-panel">
+                    <div class="hud-item">
+                        <div class="hud-label">得分 (Score)</div>
+                        <div id="hud-score" class="hud-value glow-gold">000000</div>
+                    </div>
+                    <div class="hud-item">
+                        <div class="hud-label">计时 (Time)</div>
+                        <div id="hud-timer" class="hud-value glow-cyan">0:00.0</div>
+                    </div>
+                    <div class="hud-item">
+                        <div class="hud-label">当前股价 (Price)</div>
+                        <div id="hud-price" class="hud-value" style="font-family: monospace;">¥0.00</div>
+                    </div>
+                </div>
+
+                <!-- 中间面板：展示当前股票名称与代码 -->
+                <div class="hud-panel" style="pointer-events: none; border-color: rgba(0, 240, 255, 0.25); box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);">
+                    <div class="hud-item" style="text-align: center; justify-content: center;">
+                        <div id="hud-stock-name" class="hud-value" style="color: var(--neon-cyan); font-weight: 800; font-size: 17px; text-shadow: 0 0 6px var(--neon-cyan-glow);">--</div>
+                        <div id="hud-stock-code" class="hud-label" style="letter-spacing: 1.5px; font-size: 10px; font-weight: 700; margin-top: 1px;">--</div>
+                    </div>
+                </div>
+
+                <div class="hud-panel" style="pointer-events: auto;">
+                    <button id="game-pause-btn" class="btn" style="padding: 6px 12px; font-size: 12px;">⏸ 退出 (ESC)</button>
+                    <button id="game-reset-btn" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;">🔄 重置 (R)</button>
+                    <button id="game-mute-btn" class="btn" style="padding: 6px 12px; font-size: 12px;">🔊 声音</button>
+                </div>
+            </div>
+
+            <!-- 主物理渲染 Canvas -->
+            <canvas id="game-canvas"></canvas>
+
+            <!-- 键盘按键引导提示 (桌面端可见) -->
+            <div class="controls-guide-hud">
+                <div class="controls-row">
+                    <span>驾驶:</span>
+                    <span class="key-badge">W</span> 或 <span class="key-badge">↑</span> 油门 /
+                    <span class="key-badge">S</span> 或 <span class="key-badge">↓</span> 刹车
+                </div>
+                <div class="controls-row">
+                    <span>平衡:</span>
+                    <span class="key-badge">A</span> 或 <span class="key-badge">←</span> 抬头后翻 /
+                    <span class="key-badge">D</span> 或 <span class="key-badge">→</span> 压头前翻
+                </div>
+                <div class="controls-row">
+                    <span>跳跃:</span>
+                    <span class="key-badge">Space</span> 跃起 | 
+                    <span>重置:</span>
+                    <span class="key-badge">R</span> 存档点复活
+                </div>
+            </div>
+
+            <!-- 手机端触控方向盘 (Coarse pointer 触屏下显示) -->
+            <div class="mobile-controls">
+                <!-- 左手：车身重心平衡 (抬头、压头、跳跃) -->
+                <div class="mobile-btn-group">
+                    <button id="touch-tilt-left" class="btn-touch">← 抬</button>
+                    <button id="touch-jump" class="btn-touch touch-jump">跳</button>
+                    <button id="touch-tilt-right" class="btn-touch">压 →</button>
+                </div>
+
+                <!-- 右手：加速、刹车、复活 -->
+                <div class="mobile-btn-group">
+                    <button id="touch-reset" class="btn-touch touch-danger">🔄</button>
+                    <button id="touch-brake" class="btn-touch">刹</button>
+                    <button id="touch-gas" class="btn-touch touch-success">油门</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 坠机弹窗 (Crash Overlay) -->
+        <div id="crash-overlay" class="modal-overlay">
+            <div class="modal-content">
+                <h3 class="modal-title crash">💥 骑士坠毁 (CRASHED)</h3>
+                <p class="modal-desc">这波行情波动太大，你被主力洗盘出局了！别气馁，从最近的股价支持位（存档点）重新起跑吧！</p>
+                <div class="stats-table">
+                    <div class="stats-table-row">
+                        <span class="stats-tbl-lbl">已摔车次数</span>
+                        <span id="crash-count-val" class="stats-tbl-val" style="color: var(--neon-red)">1</span>
+                    </div>
+                    <div class="stats-table-row">
+                        <span class="stats-tbl-lbl">得分损失</span>
+                        <span class="stats-tbl-val" style="color: var(--text-muted)">-100 pts</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="crash-respawn-btn" class="btn btn-primary" style="flex: 1;">🔄 存档点复活 (R)</button>
+                    <button id="crash-exit-btn" class="btn" style="flex: 1;">🚪 退出关卡</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. 胜利通关弹窗 (Victory Overlay) -->
+        <div id="victory-overlay" class="modal-overlay">
+            <div class="modal-content" style="max-width: 500px;">
+                <h3 class="modal-title victory">🎉 顺利收盘 (VICTORY)</h3>
+                <p class="modal-desc">恭喜！你成功飞越了该股票的整段历史K线，斩获丰厚利润！</p>
+                
+                <div class="stats-table">
+                    <div class="stats-table-row">
+                        <span class="stats-tbl-lbl">挑战用时</span>
+                        <span id="vic-time-val" class="stats-tbl-val" style="color: var(--neon-cyan)">0:00.0</span>
+                    </div>
+                    <div class="stats-table-row">
+                        <span class="stats-tbl-lbl">最终总积分</span>
+                        <span id="vic-score-val" class="stats-tbl-val" style="color: var(--neon-gold)">0 pts</span>
+                    </div>
+                    <div class="stats-table-row">
+                        <span class="stats-tbl-lbl">是否平滑</span>
+                        <span id="vic-smoothed-val" class="stats-tbl-val">无平滑</span>
+                    </div>
+                </div>
+
+                <!-- 排行榜成绩提交 -->
+                <div id="victory-submit-section" class="leaderboard-submit-box">
+                    <label style="font-size: 12px; color: var(--text-secondary); text-align: left;">提交成绩到全球排行榜：</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="leaderboard-nick-input" class="nick-input" placeholder="输入你的大名 (2-10字)" style="flex: 1;" maxlength="10">
+                        <button id="leaderboard-submit-btn" class="btn btn-primary">⚡ 提交</button>
+                    </div>
+                    <div id="submit-status-msg" style="font-size: 11px; color: var(--text-muted); text-align: left;"></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="vic-replay-btn" class="btn btn-primary" style="flex: 1;">🔄 再骑一波</button>
+                    <button id="vic-exit-btn" class="btn" style="flex: 1;">🚪 返回主页</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 横屏旋转提示 (仅手机竖屏时显示) -->
+    <div id="orientation-warning">
+        <div class="warning-box">
+            <div class="rotate-icon">📱🔄</div>
+            <div class="warning-text">为了获得最佳骑行手感，请将手机横向旋转 (Landscape)</div>
+        </div>
+    </div>
+
+    <!-- 启动主逻辑程序 -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

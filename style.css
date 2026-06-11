@@ -1,0 +1,1021 @@
+/* StonkRider A股版 - 霓虹暗黑证券风格 CSS */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-darkest: #08090c;
+    --bg-darker: #0d0f14;
+    --bg-dark: #121620;
+    --bg-card: rgba(18, 22, 32, 0.7);
+    --border-color: rgba(74, 85, 104, 0.3);
+    
+    /* 霓虹配色 */
+    --neon-cyan: #00f0ff;
+    --neon-cyan-glow: rgba(0, 240, 255, 0.4);
+    --neon-red: #ff4d4f; /* A股涨 (红色) */
+    --neon-red-glow: rgba(255, 77, 79, 0.4);
+    --neon-green: #52c41a; /* A股跌 (绿色) */
+    --neon-green-glow: rgba(82, 196, 26, 0.4);
+    --neon-gold: #fadb14; /* 金币/得分 */
+    --neon-gold-glow: rgba(250, 219, 20, 0.4);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --font-display: 'Outfit', 'Inter', -apple-system, sans-serif;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-darkest);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow: hidden; /* 游戏全屏体验 */
+    height: 100vh;
+    width: 100vw;
+}
+
+/* 隐藏滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-darkest);
+}
+::-webkit-scrollbar-thumb {
+    background: #2d3748;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4a5568;
+}
+
+/* 全局应用容器 */
+.app-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 屏幕模块通用样式 */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    transform: scale(0.98);
+    background-color: var(--bg-darkest);
+    background-image: radial-gradient(circle at 50% 50%, #1a1e2e 0%, var(--bg-darkest) 75%);
+}
+
+.screen.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1.0);
+    z-index: 10;
+}
+
+/* HUD 顶部通栏 */
+.hud-bar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.hud-panel {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px border-color var(--border-color);
+    padding: 10px 18px;
+    border-radius: 10px;
+    display: flex;
+    gap: 20px;
+    pointer-events: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.hud-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.hud-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+}
+
+.hud-value {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.hud-value.glow-gold {
+    color: var(--neon-gold);
+    text-shadow: 0 0 8px var(--neon-gold-glow);
+}
+.hud-value.glow-cyan {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan-glow);
+}
+
+/* 按钮通用样式 */
+.btn {
+    background: #1a202c;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    background: #2d3748;
+    border-color: var(--text-secondary);
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--neon-cyan), #00a8ff);
+    color: #000;
+    border: none;
+    box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #33f4ff, #33b5ff);
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.7);
+    color: #000;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--neon-red), #d32f2f);
+    color: #fff;
+    border: none;
+    box-shadow: 0 0 15px var(--neon-red-glow);
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #ff7875, #f5222d);
+    box-shadow: 0 0 25px rgba(255, 77, 79, 0.7);
+}
+
+/* 主页面 HTML 排版 */
+#home-screen {
+    overflow-y: auto;
+    padding: 40px 20px;
+    align-items: center;
+}
+
+.home-content {
+    max-width: 1000px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+}
+
+.brand-section {
+    text-align: center;
+}
+
+.brand-title {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(to right, #ffffff, var(--neon-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+}
+
+.brand-subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    letter-spacing: 2px;
+}
+
+/* 个人生涯总数据卡片 */
+.lifetime-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    padding: 15px 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.stat-val {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+}
+
+/* 搜索容器 */
+.search-container {
+    position: relative;
+    width: 100%;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+}
+
+.search-input {
+    width: 100%;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    padding: 15px 20px;
+    padding-right: 120px;
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.search-input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+
+.search-btn {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    bottom: 6px;
+    padding: 0 20px;
+}
+
+/* 搜索联想列表 */
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    z-index: 50;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+.search-dropdown.active {
+    display: block;
+}
+
+.search-item {
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s ease;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.search-item:hover {
+    background: rgba(0, 240, 255, 0.1);
+}
+
+.search-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-item-code {
+    font-family: monospace;
+    color: var(--neon-cyan);
+}
+
+.search-item-market {
+    font-size: 10px;
+    background: #2d3748;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* 推荐赛道网格 */
+.tracks-section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.tracks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.track-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.track-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 10px 30px rgba(0, 240, 255, 0.15);
+}
+
+.track-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.track-name-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.track-name {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.track-code {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* 难度标牌 */
+.difficulty-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.difficulty-badge.easy {
+    background: rgba(82, 196, 26, 0.15);
+    color: var(--neon-green);
+    border: 1px solid var(--neon-green);
+}
+.difficulty-badge.medium {
+    background: rgba(250, 173, 20, 0.15);
+    color: #faad14;
+    border: 1px solid #faad14;
+}
+.difficulty-badge.hard {
+    background: rgba(255, 77, 79, 0.15);
+    color: var(--neon-red);
+    border: 1px solid var(--neon-red);
+}
+.difficulty-badge.insane {
+    background: rgba(144, 19, 254, 0.15);
+    color: #c733ff;
+    border: 1px solid #c733ff;
+}
+
+.track-sparkline-wrapper {
+    height: 70px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.track-sparkline {
+    width: 100%;
+    height: 100%;
+}
+
+.track-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* 预览与关卡配置界面 */
+#level-preview-screen {
+    padding: 30px;
+    align-items: center;
+    overflow-y: auto;
+}
+
+.preview-container {
+    max-width: 800px;
+    width: 100%;
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.preview-title-group {
+    flex: 1;
+}
+
+.preview-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.preview-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* 选项面板：周期与平滑度 */
+.options-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.option-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-toggle {
+    background: #1e293b;
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle:hover {
+    color: #fff;
+    background: #334155;
+}
+
+.btn-toggle.active {
+    background: var(--neon-cyan);
+    color: #000;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+/* 平滑度滑块 */
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.smooth-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e293b;
+    outline: none;
+}
+
+.smooth-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.slider-val {
+    font-family: monospace;
+    font-size: 14px;
+    min-width: 30px;
+    color: var(--neon-cyan);
+    font-weight: bold;
+}
+
+/* 预览图 Canvas */
+.preview-chart-wrapper {
+    height: 200px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-chart {
+    width: 100%;
+    height: 100%;
+}
+
+/* 赛道技术参数详情 */
+.track-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.metric-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 10px 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-lbl {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.metric-val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* 游戏操作界面与 Canvas */
+#game-screen {
+    position: relative;
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* HUD 上的浮动控制提示卡片 */
+.controls-guide-hud {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(18, 22, 32, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.controls-row {
+    display: flex;
+    gap: 8px;
+}
+
+.key-badge {
+    background: #1e293b;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #fff;
+    font-family: monospace;
+}
+
+/* 结算与弹窗 Overlay */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 8, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transform: translateY(15px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+}
+
+.modal-title.crash {
+    color: var(--neon-red);
+    text-shadow: 0 0 15px var(--neon-red-glow);
+}
+
+.modal-title.victory {
+    color: var(--neon-gold);
+    text-shadow: 0 0 15px var(--neon-gold-glow);
+}
+
+.modal-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* 胜利输入排行榜名字 */
+.leaderboard-submit-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.nick-input {
+    background: #0d0f14;
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 8px;
+    color: #fff;
+    text-align: center;
+    font-size: 16px;
+    outline: none;
+}
+
+.nick-input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+/* 积分展示详情表格 */
+.stats-table {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 10px 15px;
+    margin: 5px 0;
+}
+
+.stats-table-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats-table-row:last-child {
+    border-bottom: none;
+}
+
+.stats-tbl-lbl {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stats-tbl-val {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* 排行榜抽屉/面板 */
+.leaderboard-panel {
+    background: rgba(18, 22, 32, 0.85);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    margin-top: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.leaderboard-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.leaderboard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 12px;
+}
+
+.leaderboard-row.self {
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+.rank-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 10px;
+    background: #2d3748;
+    color: #fff;
+}
+
+.rank-1 { background: #ffd700; color: #000; }
+.rank-2 { background: #c0c0c0; color: #000; }
+.rank-3 { background: #cd7f32; color: #000; }
+
+.leaderboard-name {
+    flex: 1;
+    margin-left: 10px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboard-score {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--neon-gold);
+}
+
+.leaderboard-time {
+    font-family: monospace;
+    color: var(--text-secondary);
+    margin-left: 10px;
+}
+
+/* 手机端虚拟触控手柄：仅在触控屏幕下激活 */
+.mobile-controls {
+    position: absolute;
+    bottom: 25px;
+    left: 20px;
+    right: 20px;
+    display: none; /* 默认隐藏 */
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* 手机端触控启用 */
+@media (pointer: coarse) {
+    .mobile-controls {
+        display: flex;
+    }
+    
+    .controls-guide-hud {
+        display: none !important; /* 手机端隐藏键盘提示 */
+    }
+}
+
+/* 即使在桌面设备，也允许通过检测判定展示虚拟摇杆 */
+body.is-touch .mobile-controls {
+    display: flex;
+}
+body.is-touch .controls-guide-hud {
+    display: none !important;
+}
+
+.mobile-btn-group {
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.btn-touch {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: rgba(30, 41, 59, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    font-family: var(--font-display);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    touch-action: none;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.btn-touch:active {
+    background: var(--neon-cyan);
+    color: #000;
+    border-color: var(--neon-cyan);
+    transform: scale(0.95);
+    box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+
+.btn-touch.touch-danger:active {
+    background: var(--neon-red);
+    color: #fff;
+    border-color: var(--neon-red);
+    box-shadow: 0 0 15px var(--neon-red-glow);
+}
+
+.btn-touch.touch-success:active {
+    background: var(--neon-green);
+    color: #fff;
+    border-color: var(--neon-green);
+    box-shadow: 0 0 15px var(--neon-green-glow);
+}
+
+.btn-touch.touch-jump {
+    width: 60px;
+    height: 60px;
+    margin-top: 5px;
+}
+
+/* 移动端竖屏旋转提示 */
+#orientation-warning {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #08090c;
+    z-index: 9999;
+    display: none; /* 默认隐藏 */
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    text-align: center;
+}
+
+/* 仅在移动触屏设备且为竖屏 (或窄高屏) 时显示 */
+@media screen and (max-aspect-ratio: 13/9) and (pointer: coarse) {
+    #orientation-warning {
+        display: flex;
+    }
+}
+
+.warning-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+}
+
+.rotate-icon {
+    font-size: 56px;
+    animation: rotate-phone 2s infinite ease-in-out;
+}
+
+.warning-text {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--neon-cyan);
+    font-weight: 600;
+    line-height: 1.5;
+    text-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+@keyframes rotate-phone {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}

@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StonkRider - 物理与稳定性测试面板</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-darkest: #08090c;
+            --bg-darker: #0d0f14;
+            --bg-dark: #121620;
+            --border-color: rgba(74, 85, 104, 0.25);
+            
+            --neon-cyan: #00f0ff;
+            --neon-cyan-glow: rgba(0, 240, 255, 0.25);
+            --neon-red: #ff4d4f;
+            --neon-red-glow: rgba(255, 77, 79, 0.25);
+            --neon-green: #52c41a;
+            --neon-green-glow: rgba(82, 196, 26, 0.25);
+            --neon-gold: #fadb14;
+            --neon-gold-glow: rgba(250, 219, 20, 0.25);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --font-display: 'Outfit', 'Inter', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-darkest);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(18, 22, 32, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, var(--neon-cyan), #a5f3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #00f0ff, #00b8d4);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px var(--neon-cyan-glow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px var(--neon-cyan);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .card {
+            background: rgba(18, 22, 32, 0.45);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(8px);
+            transition: border-color 0.2s ease;
+        }
+
+        .card.in-progress {
+            border-color: var(--neon-gold);
+            box-shadow: 0 0 8px var(--neon-gold-glow);
+        }
+
+        .card.passed {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green-glow);
+        }
+
+        .card.failed {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 8px var(--neon-red-glow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .status-badge.waiting {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--text-muted);
+            border: 1px solid rgba(100, 116, 139, 0.4);
+        }
+
+        .status-badge.running {
+            background: rgba(250, 219, 20, 0.2);
+            color: var(--neon-gold);
+            border: 1px solid rgba(250, 219, 20, 0.4);
+        }
+
+        .status-badge.passed {
+            background: rgba(82, 196, 26, 0.2);
+            color: var(--neon-green);
+            border: 1px solid rgba(82, 196, 26, 0.4);
+        }
+
+        .status-badge.failed {
+            background: rgba(255, 77, 79, 0.2);
+            color: var(--neon-red);
+            border: 1px solid rgba(255, 77, 79, 0.4);
+        }
+
+        .card-body {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .log-section {
+            background: rgba(8, 9, 12, 0.85);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #a5f3fc;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+
+        .navigation-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .navigation-links a {
+            color: var(--neon-cyan);
+            text-decoration: none;
+            font-weight: 600;
+            transition: text-shadow 0.2s ease;
+        }
+
+        .navigation-links a:hover {
+            text-shadow: 0 0 8px var(--neon-cyan);
+            text-decoration: underline;
+        }
+
+        .summary-banner {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .summary-banner.passed {
+            background: rgba(82, 196, 26, 0.15);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            display: block;
+            text-shadow: 0 0 10px var(--neon-green-glow);
+        }
+
+        .summary-banner.failed {
+            background: rgba(255, 77, 79, 0.15);
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+            display: block;
+            text-shadow: 0 0 10px var(--neon-red-glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>STONK RIDER 物理系统自动测试面板</h1>
+            <div class="subtitle">自动化测试用例，通过物理引擎快速仿真，确保摩托车起航和爬坡稳定性</div>
+            <button id="run-tests-btn" class="btn">🚀 开始运行物理测试</button>
+        </header>
+
+        <div id="summary-banner" class="summary-banner"></div>
+
+        <div class="dashboard">
+            <!-- Case 1 -->
+            <div id="case-1" class="card">
+                <div class="card-header">
+                    <span class="card-title">用例 1: 上证指数 (平地起步与油门加速测试)</span>
+                    <span id="badge-1" class="status-badge waiting">等待测试</span>
+                </div>
+                <div class="card-body">
+                    <div><strong>目的</strong>: 验证小车在起跑水平直道上出生并拉满油门时，能够平稳启动并驶入 K 线赛道，绝不能发生向后仰翻（Loop Backflip）触发坠毁。</div>
+                    <div><strong>配置</strong>: 平滑度 OFF，输入 gas = true，持续运行 400 帧 (约 6.6 秒)。</div>
+                    <div><strong>断言</strong>: 期间未发生任何 crashed 崩溃，并且最终 X 坐标 &gt; 400（即成功驶离 runway 起跑区并进入赛道）。</div>
+                    <div id="log-1" class="log-section" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Case 2 -->
+            <div id="case-2" class="card">
+                <div class="card-header">
+                    <span class="card-title">用例 2: 宁德时代 (中等难度波动爬坡测试)</span>
+                    <span id="badge-2" class="status-badge waiting">等待测试</span>
+                </div>
+                <div class="card-body">
+                    <div><strong>目的</strong>: 验证在宁德时代（300750）具有中等波动与明显爬坡的赛道上，油门加速时物理引擎是否稳定，悬挂是否合理，小车是否会因为扭矩不均而在爬坡时侧翻。</div>
+                    <div><strong>配置</strong>: 平滑度 OFF，输入 gas = true，持续运行 600 帧 (约 10 秒)。</div>
+                    <div><strong>断言</strong>: 全程未发生坠毁，且最终 X 坐标 &gt; 800。</div>
+                    <div id="log-2" class="log-section" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Case 3 -->
+            <div id="case-3" class="card">
+                <div class="card-header">
+                    <span class="card-title">用例 3: 东方财富 (极端波动性与尖峰测试)</span>
+                    <span id="badge-3" class="status-badge waiting">等待测试</span>
+                </div>
+                <div class="card-body">
+                    <div><strong>目的</strong>: 验证在东方财富（300059）这种波动极其剧烈、针尖状折线多、且爬坡急躁的赛道上，小车是否不会在经过陡峭起伏时发生穿地、飞天或倒立翻车。</div>
+                    <div><strong>配置</strong>: 平滑度 OFF，输入 gas = true，持续运行 600 帧 (约 10 秒)。</div>
+                    <div><strong>断言</strong>: 全程不发生 crashed 坠车，且最终 X 坐标 &gt; 700。</div>
+                    <div id="log-3" class="log-section" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Case 4 -->
+            <div id="case-4" class="card">
+                <div class="card-header">
+                    <span class="card-title">用例 4: 空中平衡与操纵扭矩测试 (A/D 抬压头)</span>
+                    <span id="badge-4" class="status-badge waiting">等待测试</span>
+                </div>
+                <div class="card-body">
+                    <div><strong>目的</strong>: 验证 A 键（tiltLeft 抬头）和 D 键（tiltRight 压头）的物理旋转响应，确保在空中状态下能够成功产生平衡调节力矩。</div>
+                    <div><strong>配置</strong>: 平地出生，并在首帧强行施加向上 15px/s 的空中初速度；随后分别测试 A 键的逆时针旋转与 D 键的顺时针旋转，各仿真 60 帧。</div>
+                    <div><strong>断言</strong>: 悬空状态下：① 仅按 A 键时倾角偏向抬头（角度增加）；② 仅按 D 键时倾角偏向压头（角度减小）。</div>
+                    <div id="log-4" class="log-section" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation-links">
+            <a href="index.html">← 返回游戏主页 (Back to Game)</a>
+        </div>
+    </div>
+
+    <!-- 隐藏的 Canvas 容器用于 GameController 实例化 -->
+    <canvas id="dummy-canvas" width="400" height="300" style="display:none;"></canvas>
+
+    <script type="module">
+        import { GameController } from './js/game.js';
+        import { fetchStockData } from './js/api.js';
+
+        // 强行关闭 Web Audio Engine 初始化，避免测试环境中无互动导致 Console 报警
+        window.forceMuted = true;
+
+        // 自动驾驶控制器：模拟玩家在空中调整车身姿态以适应坡度，在爬坡时合理使用油门/压头
+        function getAutopilotInput(bike, trackPoints, dt = 1/120) {
+            const input = { gas: true, brake: false, tiltLeft: false, tiltRight: false, jump: false };
+            
+            let targetAngle = 0.05; // 默认空中姿态：微微抬头 (约3度)，确保后轮优先着地
+            if (bike.isGrounded) {
+                const x = bike.getX();
+                const idx = bike.findSegmentIndex(x, trackPoints);
+                if (idx !== -1) {
+                    const A = trackPoints[idx];
+                    const B = trackPoints[idx + 1];
+                    targetAngle = Math.atan2(B.y - A.y, B.x - A.x);
+                }
+            }
+            
+            const currentAngle = bike.getAngle();
+            let angleDiff = targetAngle - currentAngle;
+            
+            // 归一化到 [-PI, PI]
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            
+            // 计算角速度 (Derivative term)
+            if (bike.lastAutopilotAngle === undefined) {
+                bike.lastAutopilotAngle = currentAngle;
+            }
+            let angularVelocity = (currentAngle - bike.lastAutopilotAngle) / dt;
+            while (angularVelocity < -Math.PI / dt) angularVelocity += Math.PI * 2 / dt;
+            while (angularVelocity > Math.PI / dt) angularVelocity -= Math.PI * 2 / dt;
+            bike.lastAutopilotAngle = currentAngle;
+            
+            // PD 控制信号 (Kp 比例增益，Kd 微分阻尼)
+            const Kp = 0.6;
+            const Kd = 0.08; 
+            const controlSignal = Kp * angleDiff - Kd * angularVelocity;
+            
+            // 根据控制信号的方向和强度进行按键模拟
+            if (controlSignal > 0.08) {
+                input.tiltLeft = true; // 抬头 (修正前倾)
+            } else if (controlSignal < -0.08) {
+                input.tiltRight = true; // 压头 (修正后仰)
+            }
+            
+            // 若倾角过大，或者角速度过快，且在空中悬空时，关闭油门进行强力稳定；在地面上（无论单双轮触地）均保持全油门以确保爬坡动力
+            if (!bike.isGrounded) {
+                if (Math.abs(angleDiff) > 0.4 || Math.abs(angularVelocity) > 3.5) {
+                    input.gas = false;
+                }
+            }
+            
+            // 倾角差较大时，强制全功率输入进行姿态修正
+            if (Math.abs(angleDiff) > 0.15) {
+                if (angleDiff > 0) {
+                    input.tiltLeft = true;
+                    input.tiltRight = false;
+                } else {
+                    input.tiltRight = true;
+                    input.tiltLeft = false;
+                }
+            }
+            
+            return input;
+        }
+
+        document.getElementById('run-tests-btn').addEventListener('click', runAllTests);
+
+        async function runAllTests() {
+            const btn = document.getElementById('run-tests-btn');
+            const summary = document.getElementById('summary-banner');
+            btn.disabled = true;
+            btn.textContent = "正在仿真测试中...";
+            summary.className = 'summary-banner';
+            summary.textContent = '';
+            
+            // 重置卡片状态
+            for (let i = 1; i <= 4; i++) {
+                const card = document.getElementById(`case-${i}`);
+                const badge = document.getElementById(`badge-${i}`);
+                const log = document.getElementById(`log-${i}`);
+                card.className = 'card';
+                badge.className = 'status-badge waiting';
+                badge.textContent = '等待测试';
+                log.style.display = 'none';
+                log.textContent = '';
+            }
+
+            // 实例化 headless 游戏控制器
+            const canvas = document.getElementById('dummy-canvas');
+            const game = new GameController(canvas, {
+                onScoreChange: () => {},
+                onCrash: () => {},
+                onVictory: () => {},
+                onCheckpoint: () => {}
+            });
+
+            // 依次执行测试
+            let passCount = 0;
+            const totalCases = 4;
+
+            // --- CASE 1 ---
+            const p1 = await runCase1(game);
+            if (p1) passCount++;
+
+            // --- CASE 2 ---
+            const p2 = await runCase2(game);
+            if (p2) passCount++;
+
+            // --- CASE 3 ---
+            const p3 = await runCase3(game);
+            if (p3) passCount++;
+
+            // --- CASE 4 ---
+            const p4 = await runCase4(game);
+            if (p4) passCount++;
+
+            // 显示总体结果
+            btn.disabled = false;
+            btn.textContent = "🚀 重新运行物理测试";
+            
+            if (passCount === totalCases) {
+                summary.className = 'summary-banner passed';
+                summary.textContent = `恭喜！全部 ${totalCases} 个测试用例通过 (ALL PASSED)！物理系统非常稳定！`;
+            } else {
+                summary.className = 'summary-banner failed';
+                summary.textContent = `警告：有 ${totalCases - passCount} 个测试用例未通过 (FAILED)。请检查下方日志！`;
+            }
+        }
+
+        async function runCase1(game) {
+            const card = document.getElementById('case-1');
+            const badge = document.getElementById('badge-1');
+            const logEl = document.getElementById('log-1');
+            
+            card.classList.add('in-progress');
+            badge.className = 'status-badge running';
+            badge.textContent = '测试中...';
+
+            let logs = [];
+            logs.push("[CASE 1] 载入上证指数 (000001) 数据...");
+
+            try {
+                const stockData = await fetchStockData("000001", "3M");
+                game.loadLevel(stockData, 1); // 1 = 不平滑
+
+                const bike = game.bike;
+                const trackPoints = game.trackPoints;
+                
+                logs.push("[CASE 1] 赛道前几个点:");
+                for (let i = 0; i < Math.min(10, trackPoints.length); i++) {
+                    logs.push(`点 ${i}: x = ${trackPoints[i].x.toFixed(1)}, y = ${trackPoints[i].y.toFixed(1)}`);
+                }
+                
+                logs.push(`[CASE 1] 起跑点 - x: ${bike.getX().toFixed(1)}, y: ${bike.chassis.y.toFixed(1)}, angle: ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°`);
+
+                let crashed = false;
+                let crashReason = "";
+                const crashListener = (e) => {
+                    crashed = true;
+                    crashReason = e.detail.reason;
+                };
+                window.addEventListener("stonkrider-crash", crashListener);
+
+                const dt = 1/60;
+
+                for (let frame = 1; frame <= 400; frame++) {
+                    const subSteps = 2;
+                    const subDt = dt / subSteps;
+                    for (let step = 0; step < subSteps; step++) {
+                        const input = getAutopilotInput(bike, trackPoints, subDt);
+                        bike.update(input, trackPoints, subDt);
+                    }
+
+                    if (frame % 1 === 0 || bike.crashed || crashed) {
+                        logs.push(`帧 ${frame}: x = ${bike.getX().toFixed(1)}, y = ${bike.chassis.y.toFixed(1)}, angle = ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°, bw.x = ${bike.backWheel.x.toFixed(1)}, fw.x = ${bike.frontWheel.x.toFixed(1)}, backGrounded = ${bike.backWheel.grounded}, frontGrounded = ${bike.frontWheel.grounded}`);
+                    }
+
+                    if (bike.crashed || crashed) {
+                        logs.push(`[CRASH] 在第 ${frame} 帧发生坠机! 原因: ${bike.crashed ? "物理判定" : crashReason}`);
+                        break;
+                    }
+                }
+
+                window.removeEventListener("stonkrider-crash", crashListener);
+
+                const finalX = bike.getX();
+                const passed = !bike.crashed && !crashed && (finalX > 400);
+
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+
+                card.classList.remove('in-progress');
+                if (passed) {
+                    card.classList.add('passed');
+                    badge.className = 'status-badge passed';
+                    badge.textContent = 'PASSED';
+                    return true;
+                } else {
+                    card.classList.add('failed');
+                    badge.className = 'status-badge failed';
+                    badge.textContent = 'FAILED';
+                    return false;
+                }
+            } catch (err) {
+                logs.push(`[ERROR] 测试执行异常: ${err.message}`);
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+                card.classList.remove('in-progress');
+                card.classList.add('failed');
+                badge.className = 'status-badge failed';
+                badge.textContent = 'ERROR';
+                return false;
+            }
+        }
+
+        async function runCase2(game) {
+            const card = document.getElementById('case-2');
+            const badge = document.getElementById('badge-2');
+            const logEl = document.getElementById('log-2');
+            
+            card.classList.add('in-progress');
+            badge.className = 'status-badge running';
+            badge.textContent = '测试中...';
+
+            let logs = [];
+            logs.push("[CASE 2] 载入宁德时代 (300750) 爬坡赛道...");
+
+            try {
+                const stockData = await fetchStockData("300750", "3M");
+                game.loadLevel(stockData, 1);
+
+                const bike = game.bike;
+                const trackPoints = game.trackPoints;
+
+                let crashed = false;
+                let crashReason = "";
+                const crashListener = (e) => {
+                    crashed = true;
+                    crashReason = e.detail.reason;
+                };
+                window.addEventListener("stonkrider-crash", crashListener);
+
+                const dt = 1/60;
+
+                for (let frame = 1; frame <= 600; frame++) {
+                    const subSteps = 2;
+                    const subDt = dt / subSteps;
+                    for (let step = 0; step < subSteps; step++) {
+                        const input = getAutopilotInput(bike, trackPoints, subDt);
+                        bike.update(input, trackPoints, subDt);
+                    }
+
+                    if (frame % 1 === 0 || bike.crashed || crashed) {
+                        logs.push(`帧 ${frame}: x = ${bike.getX().toFixed(1)}, y = ${bike.chassis.y.toFixed(1)}, angle = ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°, backGrounded = ${bike.backWheel.grounded}, frontGrounded = ${bike.frontWheel.grounded}`);
+                    }
+
+                    if (bike.crashed || crashed) {
+                        logs.push(`[CRASH] 在第 ${frame} 帧发生坠机! 原因: ${bike.crashed ? "物理判定" : crashReason}`);
+                        break;
+                    }
+                }
+
+                window.removeEventListener("stonkrider-crash", crashListener);
+
+                const finalX = bike.getX();
+                const passed = !bike.crashed && !crashed && (finalX > 800);
+
+                logs.push(`[DEBUG] finalX=${finalX.toFixed(2)}, bike.crashed=${bike.crashed}, crashed=${crashed}, passed=${passed}`);
+
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+
+                card.classList.remove('in-progress');
+                if (passed) {
+                    card.classList.add('passed');
+                    badge.className = 'status-badge passed';
+                    badge.textContent = 'PASSED';
+                    return true;
+                } else {
+                    card.classList.add('failed');
+                    badge.className = 'status-badge failed';
+                    badge.textContent = 'FAILED';
+                    return false;
+                }
+            } catch (err) {
+                logs.push(`[ERROR] 测试执行异常: ${err.message}`);
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+                card.classList.remove('in-progress');
+                card.classList.add('failed');
+                badge.className = 'status-badge failed';
+                badge.textContent = 'ERROR';
+                return false;
+            }
+        }
+
+        async function runCase3(game) {
+            const card = document.getElementById('case-3');
+            const badge = document.getElementById('badge-3');
+            const logEl = document.getElementById('log-3');
+            
+            card.classList.add('in-progress');
+            badge.className = 'status-badge running';
+            badge.textContent = '测试中...';
+ 
+            let logs = [];
+            logs.push("[CASE 3] 载入东方财富 (300059) 地狱赛道...");
+
+            try {
+                const stockData = await fetchStockData("300059", "3M");
+                game.loadLevel(stockData, 1);
+
+                const bike = game.bike;
+                const trackPoints = game.trackPoints;
+
+                let crashed = false;
+                let crashReason = "";
+                const crashListener = (e) => {
+                    crashed = true;
+                    crashReason = e.detail.reason;
+                };
+                window.addEventListener("stonkrider-crash", crashListener);
+
+                const dt = 1/60;
+
+                for (let frame = 1; frame <= 600; frame++) {
+                    const subSteps = 2;
+                    const subDt = dt / subSteps;
+                    for (let step = 0; step < subSteps; step++) {
+                        const input = getAutopilotInput(bike, trackPoints, subDt);
+                        bike.update(input, trackPoints, subDt);
+                    }
+
+                    if (frame % 100 === 0 || bike.crashed || crashed) {
+                        logs.push(`帧 ${frame}: x = ${bike.getX().toFixed(1)}, y = ${bike.chassis.y.toFixed(1)}, angle = ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°, backGrounded = ${bike.backWheel.grounded}, frontGrounded = ${bike.frontWheel.grounded}`);
+                    }
+
+                    if (bike.crashed || crashed) {
+                        logs.push(`[CRASH] 在第 ${frame} 帧发生坠机! 原因: ${bike.crashed ? "物理判定" : crashReason}`);
+                        break;
+                    }
+                }
+
+                window.removeEventListener("stonkrider-crash", crashListener);
+
+                const finalX = bike.getX();
+                const passed = !bike.crashed && !crashed && (finalX > 700);
+
+                logs.push(`[DEBUG] finalX=${finalX.toFixed(2)}, bike.crashed=${bike.crashed}, crashed=${crashed}, passed=${passed}`);
+
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+
+                card.classList.remove('in-progress');
+                if (passed) {
+                    card.classList.add('passed');
+                    badge.className = 'status-badge passed';
+                    badge.textContent = 'PASSED';
+                    return true;
+                } else {
+                    card.classList.add('failed');
+                    badge.className = 'status-badge failed';
+                    badge.textContent = 'FAILED';
+                    return false;
+                }
+            } catch (err) {
+                logs.push(`[ERROR] 测试执行异常: ${err.message}`);
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+                card.classList.remove('in-progress');
+                card.classList.add('failed');
+                badge.className = 'status-badge failed';
+                badge.textContent = 'ERROR';
+                return false;
+            }
+        }
+
+        async function runCase4(game) {
+            const card = document.getElementById('case-4');
+            const badge = document.getElementById('badge-4');
+            const logEl = document.getElementById('log-4');
+            
+            card.classList.add('in-progress');
+            badge.className = 'status-badge running';
+            badge.textContent = '测试中...';
+
+            let logs = [];
+            logs.push("[CASE 4] 初始化空中旋转力矩测试 (A/D 键)...");
+
+            try {
+                // 加载平缓的上证指数赛道
+                const stockData = await fetchStockData("000001", "3M");
+                game.loadLevel(stockData, 1);
+                
+                let bike = game.bike;
+                const trackPoints = game.trackPoints;
+
+                // 1. 测试按 A 键 (抬头/后翻/逆时针旋转): angle 应倾向增加
+                logs.push("--- 测试 1: 空中拉满 A 键 (抬头) ---");
+                // 强行把摩托车扔到高空，避免接地干扰
+                bike.chassis.y += 150;
+                bike.backWheel.y += 150;
+                bike.frontWheel.y += 150;
+                // 同时把上一帧位置设低，模拟向上飞的动能
+                bike.chassis.py = bike.chassis.y - 10;
+                bike.backWheel.py = bike.backWheel.y - 10;
+                bike.frontWheel.py = bike.frontWheel.y - 10;
+
+                const startAngleA = bike.getAngle();
+                logs.push(`初始角度: ${(startAngleA * 180 / Math.PI).toFixed(1)}°`);
+
+                const inputA = { gas: false, brake: false, tiltLeft: true, tiltRight: false, jump: false };
+                const dt = 1/60;
+
+                for (let frame = 1; frame <= 20; frame++) {
+                    const subSteps = 2;
+                    const subDt = dt / subSteps;
+                    for (let step = 0; step < subSteps; step++) {
+                        bike.update(inputA, trackPoints, subDt);
+                    }
+                    if (frame <= 10 || frame % 10 === 0) {
+                        logs.push(`帧 ${frame}: angle = ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°, Y = ${bike.chassis.y.toFixed(1)}, crashed = ${bike.crashed}`);
+                    }
+                }
+                const endAngleA = bike.getAngle();
+                // 逆时针旋转在 atan2 中角度会增加
+                let diffA = endAngleA - startAngleA;
+                if (diffA < -Math.PI) diffA += Math.PI * 2;
+                if (diffA > Math.PI) diffA -= Math.PI * 2;
+                
+                logs.push(`结束角度: ${(endAngleA * 180 / Math.PI).toFixed(1)}°, 变化量: ${(diffA * 180 / Math.PI).toFixed(1)}°`);
+                const passedA = diffA > 0.05; // 旋转变化量大于一定弧度
+                logs.push(`A键测试结果: ${passedA ? '成功' : '失败'}`);
+
+                // 2. 测试按 D 键 (压头/前翻/顺时针旋转): angle 应倾向减小
+                logs.push("\n--- 测试 2: 空中拉满 D 键 (压头) ---");
+                // 重置摩托车高空状态
+                game.loadLevel(stockData, 1);
+                bike = game.bike;
+                bike.chassis.y += 150;
+                bike.backWheel.y += 150;
+                bike.frontWheel.y += 150;
+                bike.chassis.py = bike.chassis.y - 10;
+                bike.backWheel.py = bike.backWheel.y - 10;
+                bike.frontWheel.py = bike.frontWheel.y - 10;
+
+                const startAngleD = bike.getAngle();
+                logs.push(`初始角度: ${(startAngleD * 180 / Math.PI).toFixed(1)}°`);
+
+                const inputD = { gas: false, brake: false, tiltLeft: false, tiltRight: true, jump: false };
+
+                for (let frame = 1; frame <= 20; frame++) {
+                    const subSteps = 2;
+                    const subDt = dt / subSteps;
+                    for (let step = 0; step < subSteps; step++) {
+                        bike.update(inputD, trackPoints, subDt);
+                    }
+                    if (frame <= 10 || frame % 10 === 0) {
+                        logs.push(`帧 ${frame}: angle = ${(bike.getAngle() * 180 / Math.PI).toFixed(1)}°, Y = ${bike.chassis.y.toFixed(1)}, crashed = ${bike.crashed}`);
+                    }
+                }
+                const endAngleD = bike.getAngle();
+                let diffD = endAngleD - startAngleD;
+                if (diffD < -Math.PI) diffD += Math.PI * 2;
+                if (diffD > Math.PI) diffD -= Math.PI * 2;
+
+                logs.push(`结束角度: ${(endAngleD * 180 / Math.PI).toFixed(1)}°, 变化量: ${(diffD * 180 / Math.PI).toFixed(1)}°`);
+                const passedD = diffD < -0.05; // 旋转变化量为负
+                logs.push(`D键测试结果: ${passedD ? '成功' : '失败'}`);
+
+                const passed = passedA && passedD;
+
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+
+                card.classList.remove('in-progress');
+                if (passed) {
+                    card.classList.add('passed');
+                    badge.className = 'status-badge passed';
+                    badge.textContent = 'PASSED';
+                    return true;
+                } else {
+                    card.classList.add('failed');
+                    badge.className = 'status-badge failed';
+                    badge.textContent = 'FAILED';
+                    return false;
+                }
+            } catch (err) {
+                logs.push(`[ERROR] 测试执行异常: ${err.message}`);
+                logEl.style.display = 'block';
+                logEl.textContent = logs.join('\n');
+                card.classList.remove('in-progress');
+                card.classList.add('failed');
+                badge.className = 'status-badge failed';
+                badge.textContent = 'ERROR';
+                return false;
+            }
+        }
+    </script>
+</body>
+</html>
