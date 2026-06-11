@@ -109,12 +109,15 @@ function renderTrendingTracks() {
     const grid = document.getElementById('trending-tracks-grid');
     grid.innerHTML = "";
 
-    TRENDING_TRACKS.forEach(track => {
+    const currentTrending = getTrendingTracks();
+
+    currentTrending.forEach(track => {
         const card = document.createElement('div');
         card.className = 'track-card';
         
         // 解析难度
         const diffClass = track.difficulty.toLowerCase();
+        const playCountText = track.count ? `<span style="float: right; color: var(--neon-cyan); font-size: 11px; font-weight: 600;">🔥 骑行 ${track.count} 次</span>` : "";
         
         card.innerHTML = `
             <div class="track-card-header">
@@ -127,7 +130,7 @@ function renderTrendingTracks() {
             <div class="track-sparkline-wrapper">
                 <canvas id="sparkline-${track.code}" class="track-sparkline"></canvas>
             </div>
-            <div class="track-desc">${track.desc}</div>
+            <div class="track-desc">${track.desc}${playCountText}</div>
         `;
 
         // 点击卡片进入预览选关
@@ -477,15 +480,13 @@ async function reloadPreviewData() {
     
     // 设置难度徽章
     const diffBadge = document.getElementById('preview-difficulty');
-    diffBadge.className = 'difficulty-badge';
-    
     // 匹配预设的难度
-    const preset = TRENDING_TRACKS.find(t => t.code === currentStockCode);
-    const diffText = preset ? preset.difficultyText : "普通";
-    const diffVal = preset ? preset.difficulty.toLowerCase() : "medium";
+    const track = getTrackByCode(currentStockCode);
+    const diffText = track ? track.difficultyText : "普通";
+    const diffVal = track ? track.difficulty.toLowerCase() : "medium";
     
     diffBadge.textContent = diffText;
-    diffBadge.classList.add(diffVal);
+    diffBadge.className = `difficulty-badge ${diffVal}`;
 
     // 加载动画
     document.getElementById('leaderboard-loading').style.display = "block";
@@ -493,6 +494,10 @@ async function reloadPreviewData() {
 
     try {
         activeStockData = await fetchStockData(currentStockCode, currentPeriod, currentStockSecid);
+        if (activeStockData && currentStockName) {
+            // 确保显示真实的股票名称，而不是本地降级的“自选股票 + 代码”
+            activeStockData.name = currentStockName;
+        }
         
         renderPreviewChart();
         updatePreviewMetrics();
@@ -619,7 +624,7 @@ async function loadLeaderboard() {
         scores = saved ? JSON.parse(saved) : [];
     } else {
         try {
-            const response = await fetch(`/api/leaderboard?code=${currentStockCode}&period=${currentPeriod}&smoothed=${smoothed}`);
+            const response = await fetch(`/api/leaderboard?code=${currentStockCode}&period=${currentPeriod}&smoothed=${smoothed}&_t=${Date.now()}`);
             if (response.ok) {
                 const json = await response.json();
                 if (json && json.status === "local_mode") {
@@ -683,6 +688,9 @@ function startLevelPlay() {
     // 更新生涯骑行统计次数
     userStats.rides++;
     saveUserStats();
+
+    // 记录个股玩耍次数以更新主页推荐榜单
+    recordStockPlay(currentStockCode, currentStockName, currentStockSecid, activeStockData.klines);
 }
 
 /**
@@ -827,6 +835,7 @@ async function submitScoreToLeaderboard() {
         statusMsg.textContent = "✅ 本地记录提交成功！";
         statusMsg.style.color = "var(--neon-green)";
         nickInput.disabled = true;
+        loadLeaderboard(); // 立即刷新排行展示
     } else {
         try {
             const response = await fetch('/api/leaderboard', {
@@ -848,6 +857,7 @@ async function submitScoreToLeaderboard() {
                 }
                 statusMsg.style.color = "var(--neon-green)";
                 nickInput.disabled = true;
+                loadLeaderboard(); // 立即刷新排行展示
             } else {
                 let errMsg = '服务器错误';
                 try {
@@ -869,6 +879,7 @@ async function submitScoreToLeaderboard() {
             statusMsg.textContent = "⚠️ 网络链接失败，成绩已记入本地！";
             statusMsg.style.color = "#faad14";
             nickInput.disabled = true;
+            loadLeaderboard(); // 立即刷新排行展示
         }
     }
 }
@@ -897,4 +908,132 @@ function saveScoreLocally(record) {
     // 截取前 10
     scores = scores.slice(0, 10);
     localStorage.setItem(localKey, JSON.stringify(scores));
+}
+
+/**
+ * 记录个股玩耍次数并动态添加/排序自适应推荐卡片
+ */
+function recordStockPlay(code, name, secid, klines) {
+    if (!code) return;
+    const saved = localStorage.getItem('stonkrider_trending_tracks');
+    let tracks = [];
+    if (saved) {
+        try {
+            tracks = JSON.parse(saved);
+        } catch (e) {
+            console.error("解析自适应赛道失败", e);
+        }
+    }
+    
+    // 如果本地存储为空，初始化为预设的 TRENDING_TRACKS，并赋予分级初始被玩次数
+    if (tracks.length === 0) {
+        tracks = TRENDING_TRACKS.map((t, idx) => ({
+            ...t,
+            count: 10 - idx * 2,
+            isPreset: true
+        }));
+    }
+    
+    // 检查该 stock 是否已经存在于列表中
+    let track = tracks.find(t => t.code === code);
+    if (track) {
+        track.count = (track.count || 0) + 1;
+        // 确保使用真实的中文股票名称，而不是“自选股票 + 代码”
+        if (name && name !== "未知股票" && !name.startsWith("自选股票")) {
+            track.name = name;
+        }
+    } else {
+        // 新股票，计算难度
+        const diffInfo = getStockDifficulty(klines);
+        const isSH = code.startsWith("6") || code.startsWith("9") || code.startsWith("5") || code === "000001" || code === "000300";
+        
+        track = {
+            name: name || `自选股票 ${code}`,
+            code: code,
+            market: isSH ? 1 : 0,
+            secid: secid || (isSH ? `1.${code}` : `0.${code}`),
+            difficulty: diffInfo.difficulty,
+            difficultyText: diffInfo.difficultyText,
+            desc: `自选探索的股票赛道。已被玩过 1 次，欢迎继续挑战！`,
+            count: 1,
+            isPreset: false
+        };
+        tracks.push(track);
+    }
+    
+    // 保存回 localStorage
+    localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
+}
+
+/**
+ * 计算个股基于波动率的推荐难度
+ */
+function getStockDifficulty(klines) {
+    if (!klines || klines.length === 0) return { difficulty: "Medium", difficultyText: "普通" };
+    
+    let sumChange = 0;
+    let validDays = 0;
+    klines.forEach(k => {
+        if (k.pctChange !== undefined && !isNaN(k.pctChange)) {
+            sumChange += Math.abs(k.pctChange);
+            validDays++;
+        }
+    });
+    
+    const avgChange = validDays > 0 ? sumChange / validDays : 1.5;
+    
+    if (avgChange < 1.0) {
+        return { difficulty: "Easy", difficultyText: "简单" };
+    } else if (avgChange < 2.0) {
+        return { difficulty: "Medium", difficultyText: "普通" };
+    } else if (avgChange < 3.5) {
+        return { difficulty: "Hard", difficultyText: "困难" };
+    } else {
+        return { difficulty: "Insane", difficultyText: "地狱" };
+    }
+}
+
+/**
+ * 获取主页被玩次数最多排名的前 6 个热门赛道
+ */
+function getTrendingTracks() {
+    const saved = localStorage.getItem('stonkrider_trending_tracks');
+    let tracks = [];
+    if (saved) {
+        try {
+            tracks = JSON.parse(saved);
+        } catch (e) {
+            console.error("解析自适应赛道失败", e);
+        }
+    }
+    
+    if (tracks.length === 0) {
+        tracks = TRENDING_TRACKS.map((t, idx) => ({
+            ...t,
+            count: 10 - idx * 2,
+            isPreset: true
+        }));
+        localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
+    }
+    
+    // 按 count 降序排列，取前 6 个
+    tracks.sort((a, b) => (b.count || 0) - (a.count || 0));
+    return tracks.slice(0, 6);
+}
+
+/**
+ * 根据代码获取特定赛道的配置信息 (支持自选赛道)
+ */
+function getTrackByCode(code) {
+    const saved = localStorage.getItem('stonkrider_trending_tracks');
+    if (saved) {
+        try {
+            const tracks = JSON.parse(saved);
+            const found = tracks.find(t => t.code === code);
+            if (found) return found;
+        } catch (e) {
+            console.error("解析自适应赛道失败", e);
+        }
+    }
+    return TRENDING_TRACKS.find(t => t.code === code);
 }
