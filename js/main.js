@@ -483,14 +483,17 @@ async function selectStock(code, name, secid) {
  * 重新加载并更新预览界面的数据
  */
 async function reloadPreviewData() {
+    // 每次重新加载前，清空先前的 activeStockData，防止加载延迟期间点击“开始”启动了旧关卡
+    activeStockData = null;
+
     // Renders loading indicators
     document.getElementById('preview-stock-name').textContent = currentStockName;
     document.getElementById('preview-stock-code').textContent = `${currentStockCode}.${currentStockSecid.startsWith("1") ? "SH" : "SZ"}`;
     
     // 设置难度徽章
     const diffBadge = document.getElementById('preview-difficulty');
-    // 匹配预设的难度
-    const track = getTrackByCode(currentStockCode);
+    // 匹配预设的难度 (传入 secid 避免 000001 冲突)
+    const track = getTrackByCode(currentStockCode, currentStockSecid);
     const diffText = track ? track.difficultyText : "普通";
     const diffVal = track ? track.difficulty.toLowerCase() : "medium";
     
@@ -503,9 +506,15 @@ async function reloadPreviewData() {
 
     try {
         activeStockData = await fetchStockData(currentStockCode, currentPeriod, currentStockSecid);
-        if (activeStockData && currentStockName) {
-            // 确保显示真实的股票名称，而不是本地降级的“自选股票 + 代码”
-            activeStockData.name = currentStockName;
+        if (activeStockData) {
+            // 如果 API 返回了真实的中文字符，且当前记录的名称是自选降级名，应更新为真实名称
+            if (activeStockData.name && activeStockData.name !== "未知股票" && !activeStockData.name.startsWith("自选股票")) {
+                currentStockName = activeStockData.name;
+                document.getElementById('preview-stock-name').textContent = currentStockName;
+                updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
+            } else if (currentStockName) {
+                activeStockData.name = currentStockName;
+            }
         }
         
         renderPreviewChart();
@@ -752,6 +761,9 @@ setInterval(() => {
         priceEl.textContent = `¥${currPoint.price.toFixed(2)}`;
         priceEl.style.color = isUp ? 'var(--neon-red)' : 'var(--neon-green)';
         priceEl.style.textShadow = isUp ? '0 0 8px var(--neon-red-glow)' : '0 0 8px var(--neon-green-glow)';
+
+        // 3. 更新 HUD 迷你地图及骑手位置
+        drawHUDMinimap(gameController, ratioX);
     }
 }, 100);
 
@@ -929,6 +941,14 @@ function recordStockPlay(code, name, secid, klines) {
     if (saved) {
         try {
             tracks = JSON.parse(saved);
+            // 数据迁移/规格化：确保 presets 都升级为最新的 secid 规格，避免旧数据干扰
+            tracks = tracks.map(t => {
+                const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
+                if (preset) {
+                    return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
+                }
+                return t;
+            });
         } catch (e) {
             console.error("解析自适应赛道失败", e);
         }
@@ -943,13 +963,23 @@ function recordStockPlay(code, name, secid, klines) {
         }));
     }
     
-    // 检查该 stock 是否已经存在于列表中
-    let track = tracks.find(t => t.code === code);
+    // 检查该 stock 是否已经存在于列表中 (优先用 secid 唯一标识，避免沪深代码冲突，如 000001 上证指数 vs 平安银行)
+    let track = tracks.find(t => {
+        const fullSecid = t.secid || t.secid_full;
+        if (secid && fullSecid) {
+            return fullSecid === secid;
+        }
+        return t.code === code;
+    });
+
     if (track) {
         track.count = (track.count || 0) + 1;
         // 确保使用真实的中文股票名称，而不是“自选股票 + 代码”
         if (name && name !== "未知股票" && !name.startsWith("自选股票")) {
             track.name = name;
+        }
+        if (secid) {
+            track.secid = secid;
         }
     } else {
         // 新股票，计算难度
@@ -1011,6 +1041,13 @@ function getTrendingTracks() {
     if (saved) {
         try {
             tracks = JSON.parse(saved);
+            tracks = tracks.map(t => {
+                const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
+                if (preset) {
+                    return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
+                }
+                return t;
+            });
         } catch (e) {
             console.error("解析自适应赛道失败", e);
         }
@@ -1031,18 +1068,130 @@ function getTrendingTracks() {
 }
 
 /**
- * 根据代码获取特定赛道的配置信息 (支持自选赛道)
+ * 动态更新主页推荐赛道列表里的中文股票名称 (用于把“自选股票 + 代码”升级为真实名字)
  */
-function getTrackByCode(code) {
+function updateTrendingTrackName(code, secid, name) {
+    if (!code || !name) return;
     const saved = localStorage.getItem('stonkrider_trending_tracks');
+    if (!saved) return;
+    try {
+        let tracks = JSON.parse(saved);
+        let updated = false;
+        tracks = tracks.map(t => {
+            const matchSecid = (secid && (t.secid === secid || t.secid_full === secid)) || t.code === code;
+            if (matchSecid && t.name !== name) {
+                t.name = name;
+                updated = true;
+            }
+            return t;
+        });
+        if (updated) {
+            localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
+        }
+    } catch (e) {
+        console.error("更新自选股票名称失败", e);
+    }
+}
+
+/**
+ * 根据代码或 secid 获取特定赛道的配置信息 (支持自选赛道)
+ */
+function getTrackByCode(code, secid = "") {
+    const saved = localStorage.getItem('stonkrider_trending_tracks');
+    let tracks = [];
     if (saved) {
         try {
-            const tracks = JSON.parse(saved);
-            const found = tracks.find(t => t.code === code);
-            if (found) return found;
+            tracks = JSON.parse(saved);
+            tracks = tracks.map(t => {
+                const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
+                if (preset) {
+                    return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
+                }
+                return t;
+            });
         } catch (e) {
             console.error("解析自适应赛道失败", e);
         }
     }
-    return TRENDING_TRACKS.find(t => t.code === code);
+    
+    if (tracks.length === 0) {
+        tracks = TRENDING_TRACKS;
+    }
+
+    const found = tracks.find(t => (secid && (t.secid === secid || t.secid_full === secid)) || t.code === code);
+    if (found) return found;
+    return TRENDING_TRACKS.find(t => (secid && (t.secid === secid || t.secid_full === secid)) || t.code === code);
+}
+
+/**
+ * 绘制实时的 HUD 赛道预览迷你小地图
+ * @param {GameController} game 游戏控制器实例
+ * @param {number} ratioX 当前骑手在赛道上的水平进度比例 (0.0 - 1.0)
+ */
+function drawHUDMinimap(game, ratioX) {
+    const canvas = document.getElementById('hud-minimap');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight;
+    
+    const pts = game.trackPoints;
+    if (!pts || pts.length < 2) return;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 1. 提取所有点的高度并归一化价格波动范围
+    const prices = pts.map(p => p.price);
+    const maxP = Math.max(...prices);
+    const minP = Math.min(...prices);
+    const range = maxP - minP || 1;
+    
+    // 2. 绘制整个赛道背景辅助折线 (半透明淡灰)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    
+    for (let i = 0; i < pts.length; i++) {
+        const x = (i / (pts.length - 1)) * w;
+        const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    ctx.stroke();
+    
+    // 3. 绘制玩家已骑行通过的轨迹 (高亮霓虹蓝)
+    ctx.strokeStyle = 'var(--neon-cyan)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const currentIdx = Math.floor(ratioX * (pts.length - 1));
+    for (let i = 0; i <= currentIdx; i++) {
+        const x = (i / (pts.length - 1)) * w;
+        const y = h - 4 - ((pts[i].price - minP) / range) * (h - 8);
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    ctx.stroke();
+    
+    // 4. 绘制玩家当前所在的位置指示点 (发光红色圆点)
+    if (currentIdx >= 0 && currentIdx < pts.length) {
+        const currentPt = pts[currentIdx];
+        const dotX = ratioX * w;
+        const dotY = h - 4 - ((currentPt.price - minP) / range) * (h - 8);
+        
+        ctx.fillStyle = '#ff3366';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = '#ff3366';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; // 还原 shadow 防止影响后续绘图
+    }
 }

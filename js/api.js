@@ -181,6 +181,9 @@ function fetchSinaSuggestJSONP(keyword) {
         const callbackName = `sina_suggest_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
         const script = document.createElement('script');
         
+        // 新浪搜索建议接口为 GBK 编码，在此显式设置编码，防止浏览器默认 UTF-8 导致中文显示为乱码
+        script.charset = "gbk";
+        
         // 新浪搜索建议接口支持通过 name 参数自定义全局变量名，借此实现跨域读取
         script.src = `https://suggest3.sinajs.cn/suggest/type=11,12,31&key=${encodeURIComponent(keyword)}&name=${callbackName}`;
         script.async = true;

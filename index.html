@@ -182,11 +182,15 @@
                     </div>
                 </div>
 
-                <!-- 中间面板：展示当前股票名称与代码 -->
-                <div class="hud-panel" style="pointer-events: none; border-color: rgba(0, 240, 255, 0.25); box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);">
-                    <div class="hud-item" style="text-align: center; justify-content: center;">
-                        <div id="hud-stock-name" class="hud-value" style="color: var(--neon-cyan); font-weight: 800; font-size: 17px; text-shadow: 0 0 6px var(--neon-cyan-glow);">--</div>
-                        <div id="hud-stock-code" class="hud-label" style="letter-spacing: 1.5px; font-size: 10px; font-weight: 700; margin-top: 1px;">--</div>
+                <!-- 中间面板：展示当前股票名称与代码 + 迷你小地图 -->
+                <div class="hud-panel" style="pointer-events: none; border-color: rgba(0, 240, 255, 0.25); box-shadow: 0 0 10px rgba(0, 240, 255, 0.1); width: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 15px;">
+                    <div class="hud-item" style="text-align: center; justify-content: center; flex-direction: column; gap: 1px; width: 100%;">
+                        <div id="hud-stock-name" class="hud-value" style="color: var(--neon-cyan); font-weight: 800; font-size: 16px; text-shadow: 0 0 6px var(--neon-cyan-glow);">--</div>
+                        <div id="hud-stock-code" class="hud-label" style="letter-spacing: 1.5px; font-size: 9px; font-weight: 700; margin-top: 1px;">--</div>
+                    </div>
+                    <!-- 实时小地图容器 -->
+                    <div style="width: 180px; height: 20px; position: relative; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 240, 255, 0.15);">
+                        <canvas id="hud-minimap" style="width: 100%; height: 100%; display: block;"></canvas>
                     </div>
                 </div>
 
