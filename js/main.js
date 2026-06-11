@@ -260,6 +260,35 @@ function setupUIListeners() {
         }
     });
 
+    // 微信打赏弹窗显示与隐藏
+    const wechatModal = document.getElementById('wechat-reward-modal');
+    const wechatBtn = document.getElementById('wechat-reward-btn');
+    const closeRewardBtn = document.getElementById('close-reward-btn');
+    const rewardOkBtn = document.getElementById('reward-ok-btn');
+
+    if (wechatBtn && wechatModal) {
+        wechatBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            wechatModal.classList.add('active');
+        });
+    }
+
+    const closeRewardModal = () => {
+        if (wechatModal) wechatModal.classList.remove('active');
+    };
+
+    if (closeRewardBtn) closeRewardBtn.addEventListener('click', closeRewardModal);
+    if (rewardOkBtn) rewardOkBtn.addEventListener('click', closeRewardModal);
+    
+    // 点击弹窗外部半透明区域也可关闭
+    if (wechatModal) {
+        wechatModal.addEventListener('click', (e) => {
+            if (e.target === wechatModal) {
+                closeRewardModal();
+            }
+        });
+    }
+
     // B. 预览界面返回主页
     document.getElementById('preview-back-btn').addEventListener('click', () => {
         switchScreen('home-screen');

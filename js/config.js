@@ -86,6 +86,20 @@ export const PHYSICS_CONFIG = {
     maxCrashes: 999
 };
 
+// 简单的种子伪随机数生成器，确保确定性生成
+function createSeededRandom(seedString) {
+    let seed = 0;
+    for (let i = 0; i < seedString.length; i++) {
+        seed = (seed << 5) - seed + seedString.charCodeAt(i);
+        seed |= 0; // 转换为32位有符号整数
+    }
+    return function() {
+        // LCG 算法
+        seed = (seed * 1664525 + 1013904223) | 0;
+        return (seed >>> 0) / 0xffffffff;
+    };
+}
+
 // 预设离线 K 线数据生成器 (当没有 API 或本地双击运行时使用)
 export function generateOfflineKlines(code, pointsCount = 180) {
     let basePrice = 100;
@@ -114,6 +128,9 @@ export function generateOfflineKlines(code, pointsCount = 180) {
         trend = 0.0008;
     }
     
+    // 使用股票代码与点数拼接作为种子
+    const random = createSeededRandom(code + "_" + pointsCount);
+    
     const klines = [];
     let currentPrice = basePrice;
     let date = new Date(new Date().getTime() - pointsCount * 24 * 60 * 60 * 1000);
@@ -131,28 +148,28 @@ export function generateOfflineKlines(code, pointsCount = 180) {
         
         // 使用正弦波叠随机游走生成曲线
         const sineWave = Math.sin(i / 15) * (basePrice * volatility * 1.5);
-        const randomFactor = (Math.random() - 0.5 + trend) * (basePrice * volatility);
+        const randomFactor = (random() - 0.5 + trend) * (basePrice * volatility);
         
         // 东方财富特殊针状行情
         let spike = 0;
-        if (code === "300059" && Math.random() < 0.08) {
-            spike = (Math.random() - 0.5) * (basePrice * volatility * 4);
+        if (code === "300059" && random() < 0.08) {
+            spike = (random() - 0.5) * (basePrice * volatility * 4);
         }
         
         currentPrice = currentPrice + randomFactor + spike;
         // 叠加正弦以形成起伏的丘陵/谷底赛道
         let finalPrice = Math.max(basePrice * 0.1, currentPrice + sineWave);
         
-        const open = finalPrice * (1 + (Math.random() - 0.5) * 0.01);
+        const open = finalPrice * (1 + (random() - 0.5) * 0.01);
         const close = finalPrice;
-        const high = Math.max(open, close) * (1 + Math.random() * 0.015);
-        const low = Math.min(open, close) * (1 - Math.random() * 0.015);
-        const volume = Math.floor(Math.random() * 1000000) + 100000;
+        const high = Math.max(open, close) * (1 + random() * 0.015);
+        const low = Math.min(open, close) * (1 - random() * 0.015);
+        const volume = Math.floor(random() * 1000000) + 100000;
         const amount = volume * finalPrice;
         const amplitude = ((high - low) / low) * 100;
         const pctChange = ((close - prevPrice) / prevPrice) * 100;
         const diffPrice = close - prevPrice;
-        const turnover = Math.random() * 5;
+        const turnover = random() * 5;
         
         // 东财格式: "日期,开盘,收盘,最高,最低,成交量,成交额,振幅,涨跌幅,涨跌额,换手率"
         klines.push(`${dateStr},${open.toFixed(2)},${close.toFixed(2)},${high.toFixed(2)},${low.toFixed(2)},${volume},${amount.toFixed(2)},${amplitude.toFixed(2)},${pctChange.toFixed(2)},${diffPrice.toFixed(2)},${turnover.toFixed(2)}`);

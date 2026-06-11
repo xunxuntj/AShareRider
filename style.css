@@ -1019,3 +1019,42 @@ body.is-touch .controls-guide-hud {
     50% { transform: rotate(-90deg); }
     100% { transform: rotate(0deg); }
 }
+
+/* 页脚社交与赞助链接样式 */
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.footer-link-item {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.footer-link-item:hover {
+    color: var(--neon-cyan);
+    border-color: rgba(0, 240, 255, 0.3);
+    background: rgba(0, 240, 255, 0.05);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.footer-icon {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
