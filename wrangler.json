@@ -1,0 +1,9 @@
+{
+  "pages_build_output_dir": ".",
+  "kv_namespaces": [
+    {
+      "binding": "STONK_LEADERBOARD",
+      "id": "ff5d5ae750748b8b29e53625"
+    }
+  ]
+}

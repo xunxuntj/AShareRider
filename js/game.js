@@ -1104,28 +1104,86 @@ export class GameController {
         ctx.fill();
         ctx.stroke();
 
-        // 绘制骑手头部与躯干 (精美几何火柴人)
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
+        // ==========================================
+        // 绘制“牛头熊身”卡通骑手 (Bull Head & Bear Body Rider)
+        // ==========================================
+        ctx.save();
         ctx.shadowBlur = 4;
-        
-        // 骑手头部
+        ctx.shadowColor = "#ffffff";
+
+        // 1. 绘制熊身 (Bear Body - 粗壮棕色躯干与四肢)
+        ctx.fillStyle = "#A0522D"; // 赭石色/棕色 (Bear torso)
+        ctx.strokeStyle = "#8B4513"; // 深棕色轮廓
+        ctx.lineWidth = 1.5;
+
+        // 熊的圆滚滚身体 (臀部贴车座)
         ctx.beginPath();
-        ctx.arc(-5, 18, 4, 0, Math.PI * 2);
+        ctx.arc(-6, 9, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 熊的粗壮手臂 (从肩部 (-5, 12) 伸向车把 (5, 7))
+        ctx.strokeStyle = "#A0522D";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-4, 12);
+        ctx.quadraticCurveTo(0, 11, 5, 7); // 手臂曲线
+        ctx.stroke();
+        
+        // 熊的粗壮腿部 (臀部到踏板 (-2, 0))
+        ctx.beginPath();
+        ctx.moveTo(-6, 6);
+        ctx.quadraticCurveTo(-6, 3, -2, 0); // 腿部曲线
+        ctx.stroke();
+
+        // 2. 绘制牛头 (Bull Head - 头部 + 脸部点缀)
+        ctx.fillStyle = "#8B4513"; // 深棕色牛头
+        ctx.strokeStyle = "#5C2E0B";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(-5, 17, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // 牛鼻子/嘴巴部分 (浅色突出)
+        ctx.fillStyle = "#CD853F";
+        ctx.beginPath();
+        ctx.arc(-4, 16, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // 躯干与手臂、腿部
+        // 牛的眼睛 (小黑点)
+        ctx.fillStyle = "#000000";
         ctx.beginPath();
-        ctx.moveTo(-5, 14); // 颈部
-        ctx.lineTo(-7, 6);  // 臀部 (贴在车座)
-        
-        ctx.moveTo(-5, 12); // 肩部
-        ctx.lineTo(5, 7);   // 手握方向盘
+        ctx.arc(-3, 17.5, 0.6, 0, Math.PI * 2);
+        ctx.fill();
 
-        ctx.moveTo(-7, 6);  // 臀部
-        ctx.lineTo(-2, 0);   // 脚踏板
+        // 3. 绘制金色牛角 (Bull Horns - 代表牛市冲天的金黄弯角)
+        ctx.fillStyle = "#FFD700"; // 纯金色 (Gold)
+        ctx.strokeStyle = "#FFA500"; // 橙色轮廓
+        ctx.lineWidth = 1;
+        ctx.shadowColor = "#FFD700";
+        ctx.shadowBlur = 8; // 金光闪闪！
+
+        // 左牛角 (向左上弯曲)
+        ctx.beginPath();
+        ctx.moveTo(-7.5, 19);
+        ctx.quadraticCurveTo(-11, 23, -8, 24); // 角外侧弯曲
+        ctx.quadraticCurveTo(-7.5, 21, -6.5, 19.5); // 角内侧
+        ctx.closePath();
+        ctx.fill();
         ctx.stroke();
+
+        // 右牛角 (向右上弯曲)
+        ctx.beginPath();
+        ctx.moveTo(-3, 19.5);
+        ctx.quadraticCurveTo(0, 23, 2, 23); // 角外侧弯曲
+        ctx.quadraticCurveTo(-1, 21, -2, 19); // 角内侧
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
 
         ctx.restore();
         ctx.restore();
