@@ -63,9 +63,11 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* 优先使用动态视口高度，解决移动端浏览器底部工具栏遮挡问题 */
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
 }
 
 /* 屏幕模块通用样式 */
@@ -636,7 +638,10 @@ body {
 
 /* 游戏操作界面与 Canvas */
 #game-screen {
-    position: relative;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
 #game-canvas {
@@ -889,9 +894,9 @@ body {
 /* 手机端虚拟触控手柄：仅在触控屏幕下激活 */
 .mobile-controls {
     position: absolute;
-    bottom: 25px;
-    left: 20px;
-    right: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: max(20px, env(safe-area-inset-left));
+    right: max(20px, env(safe-area-inset-right));
     display: none; /* 默认隐藏 */
     justify-content: space-between;
     pointer-events: none;
@@ -1056,5 +1061,40 @@ body.is-touch .controls-guide-hud {
     width: 14px;
     height: 14px;
     fill: currentColor;
+}
+
+/* 针对矮屏（例如大部分手机横屏状态）优化按钮尺寸与边距，防止越界被裁切 */
+@media screen and (max-height: 420px) {
+    .btn-touch {
+        width: 54px;
+        height: 54px;
+        font-size: 15px;
+        border-width: 1.5px;
+    }
+    .btn-touch.touch-jump {
+        width: 48px;
+        height: 48px;
+    }
+    .mobile-controls {
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: max(15px, env(safe-area-inset-left));
+        right: max(15px, env(safe-area-inset-right));
+    }
+    /* 缩小顶部 HUD 高度与间距 */
+    .hud-bar {
+        top: 10px;
+        left: 15px;
+        right: 15px;
+    }
+    .hud-panel {
+        padding: 4px 10px;
+        gap: 12px;
+    }
+    .hud-value {
+        font-size: 14px;
+    }
+    .hud-label {
+        font-size: 8px;
+    }
 }
 
