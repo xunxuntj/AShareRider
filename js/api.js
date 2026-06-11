@@ -6,7 +6,7 @@ import { generateOfflineKlines } from './config.js';
  * @param {string} period 周期：'3M', '6M', '1Y', 'ALL'
  * @returns {Promise<{name: string, code: string, klines: Array}>}
  */
-export async function fetchStockData(code, period = '1Y') {
+export async function fetchStockData(code, period = '1Y', secid = '') {
     // 决定获取的数据点数
     let limit = 240; // 默认 1 年约 240 个交易日
     if (period === '3M') limit = 60;
@@ -15,17 +15,15 @@ export async function fetchStockData(code, period = '1Y') {
     else if (period === 'ALL') limit = 600;
 
     // 检查是本地运行还是在线运行
-    const isLocal = window.location.protocol === 'file:' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === 'localhost';
+    const isLocal = window.location.protocol === 'file:';
 
-    // 如果是本地 file 协议，或者在开发阶段没有启动 cf proxy，直接使用本地生成的数据
+    // 如果是本地 file 协议，直接使用本地生成的数据
     if (isLocal && !window.forceCloudflareAPI) {
         console.log(`[API] 检测到本地/离线环境，为股票 ${code} 使用生成的数据.`);
         const mockRawLines = generateOfflineKlines(code, limit);
         return parseEastmoneyData({
             data: {
-                name: getStockNameByCode(code),
+                name: getStockNameByCode(code, secid),
                 code: code,
                 klines: mockRawLines
             }
@@ -34,7 +32,7 @@ export async function fetchStockData(code, period = '1Y') {
 
     try {
         // 请求 Cloudflare Serverless Function 代理
-        const response = await fetch(`/api/stock?code=${code}&limit=${limit}`);
+        const response = await fetch(`/api/stock?code=${code}&secid=${secid}&limit=${limit}`);
         if (!response.ok) {
             throw new Error(`HTTP 错误: ${response.status}`);
         }
@@ -48,7 +46,7 @@ export async function fetchStockData(code, period = '1Y') {
         const mockRawLines = generateOfflineKlines(code, limit);
         return parseEastmoneyData({
             data: {
-                name: getStockNameByCode(code),
+                name: getStockNameByCode(code, secid),
                 code: code,
                 klines: mockRawLines
             }
@@ -64,13 +62,12 @@ export async function fetchStockData(code, period = '1Y') {
 export async function searchStocks(keyword) {
     if (!keyword || keyword.trim() === "") return [];
     
-    const isLocal = window.location.protocol === 'file:' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === 'localhost';
+    const isLocal = window.location.protocol === 'file:';
 
     if (isLocal && !window.forceCloudflareAPI) {
         // 本地离线环境只返回几个预设的匹配
         const presets = [
+            { code: "000001", name: "平安银行", secid: "0.000001" },
             { code: "000001", name: "上证指数", secid: "1.000001" },
             { code: "600519", name: "贵州茅台", secid: "1.600519" },
             { code: "002594", name: "比亚迪", secid: "0.002594" },
@@ -87,6 +84,7 @@ export async function searchStocks(keyword) {
     } catch (err) {
         console.warn(`[API] 搜索请求失败，降级本地匹配: ${err.message}`);
         const presets = [
+            { code: "000001", name: "平安银行", secid: "0.000001" },
             { code: "000001", name: "上证指数", secid: "1.000001" },
             { code: "600519", name: "贵州茅台", secid: "1.600519" },
             { code: "002594", name: "比亚迪", secid: "0.002594" },
@@ -132,9 +130,11 @@ function parseEastmoneyData(json) {
 /**
  * 离线模式下代码与名字映射
  */
-function getStockNameByCode(code) {
+function getStockNameByCode(code, secid = "") {
+    if (code === "000001") {
+        return secid.startsWith("1") ? "上证指数" : "平安银行";
+    }
     const map = {
-        "000001": "上证指数",
         "600519": "贵州茅台",
         "002594": "比亚迪",
         "300750": "宁德时代",

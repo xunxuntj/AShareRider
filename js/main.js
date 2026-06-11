@@ -463,7 +463,7 @@ async function reloadPreviewData() {
     document.getElementById('leaderboard-list-container').style.display = "none";
 
     try {
-        activeStockData = await fetchStockData(currentStockCode, currentPeriod);
+        activeStockData = await fetchStockData(currentStockCode, currentPeriod, currentStockSecid);
         
         renderPreviewChart();
         updatePreviewMetrics();
@@ -575,9 +575,7 @@ function updatePreviewMetrics() {
  * 加载当前赛道的排行榜 (全球)
  */
 async function loadLeaderboard() {
-    const isLocal = window.location.protocol === 'file:' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === 'localhost';
+    const isLocal = window.location.protocol === 'file:';
 
     const smoothed = smoothWindowVal > 1;
     const listContainer = document.getElementById('leaderboard-list-container');
@@ -792,9 +790,7 @@ async function submitScoreToLeaderboard() {
         time: time
     };
 
-    const isLocal = window.location.protocol === 'file:' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === 'localhost';
+    const isLocal = window.location.protocol === 'file:';
 
     if (isLocal && !window.forceCloudflareAPI) {
         // 本地环境直接存入 localStorage

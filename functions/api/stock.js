@@ -36,7 +36,9 @@ export async function onRequestGet(context) {
                 return new Response(JSON.stringify({ error: "Sina API suggest error" }), { status: 500, headers: corsHeaders });
             }
 
-            const text = await response.text();
+            const buffer = await response.arrayBuffer();
+            const decoder = new TextDecoder("gbk");
+            const text = decoder.decode(buffer);
             // 解析新浪的 JavaScript 变量返回格式: var suggestdata="贵州茅台,11,600519,sh600519,贵州茅台,gizm;..."
             const match = text.match(/"([^"]+)"/);
             if (!match || !match[1]) {
