@@ -313,9 +313,9 @@ function setupUIListeners() {
     const smoothValText = document.getElementById('smooth-slider-value');
     smoothSlider.addEventListener('input', (e) => {
         const val = parseInt(e.target.value);
-        smoothWindowVal = val;
+        smoothWindowVal = val === 0 ? 1 : val;
         
-        if (val === 1) {
+        if (val === 0) {
             smoothValText.textContent = "OFF";
         } else {
             smoothValText.textContent = `${val} 日线`;
@@ -466,7 +466,7 @@ async function selectStock(code, name, secid) {
     // 默认恢复 1 年周期且不平滑
     currentPeriod = "1Y";
     smoothWindowVal = 1;
-    document.getElementById('smooth-range-slider').value = 1;
+    document.getElementById('smooth-range-slider').value = 0;
     document.getElementById('smooth-slider-value').textContent = "OFF";
 
     const periodButtons = document.querySelectorAll('#period-btn-group .btn-toggle');
@@ -512,8 +512,34 @@ async function reloadPreviewData() {
                 currentStockName = activeStockData.name;
                 document.getElementById('preview-stock-name').textContent = currentStockName;
                 updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
-            } else if (currentStockName) {
-                activeStockData.name = currentStockName;
+            } else {
+                // 如果目前的名字是自选降级名，我们尝试通过联想接口(JSONP)异步查询其真实中文名字
+                if (!currentStockName || currentStockName.startsWith("自选股票") || activeStockData.name.startsWith("自选股票")) {
+                    searchStocks(currentStockCode).then(results => {
+                        if (results && results.length > 0) {
+                            // 查找精准匹配代码的项
+                            const found = results.find(r => {
+                                if (currentStockSecid && r.secid) {
+                                    return r.secid === currentStockSecid;
+                                }
+                                return r.code === currentStockCode;
+                            });
+                            if (found && found.name) {
+                                currentStockName = found.name;
+                                activeStockData.name = currentStockName;
+                                document.getElementById('preview-stock-name').textContent = currentStockName;
+                                // 同时也同步更新 HUD 展示
+                                const hudNameEl = document.getElementById('hud-stock-name');
+                                if (hudNameEl) hudNameEl.textContent = currentStockName;
+                                updateTrendingTrackName(currentStockCode, currentStockSecid, currentStockName);
+                            }
+                        }
+                    }).catch(err => console.warn("异步修正股票名称失败:", err));
+                }
+                
+                if (currentStockName) {
+                    activeStockData.name = currentStockName;
+                }
             }
         }
         
@@ -941,8 +967,17 @@ function recordStockPlay(code, name, secid, klines) {
     if (saved) {
         try {
             tracks = JSON.parse(saved);
-            // 数据迁移/规格化：确保 presets 都升级为最新的 secid 规格，避免旧数据干扰
-            tracks = tracks.map(t => {
+            // 数据迁移/规格化：确保 presets 都升级为最新的 secid 规格，避免旧数据干扰，添加 lastPlayed
+            tracks = tracks.map((t, idx) => {
+                if (t.lastPlayed === undefined) {
+                    t.lastPlayed = Date.now() - (idx * 24 * 60 * 60 * 1000);
+                    if (t.isPreset) {
+                        const presetIdx = TRENDING_TRACKS.findIndex(pt => pt.code === t.code && pt.market === t.market);
+                        if (presetIdx !== -1) {
+                            t.count = 5 - presetIdx;
+                        }
+                    }
+                }
                 const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
                 if (preset) {
                     return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
@@ -958,7 +993,8 @@ function recordStockPlay(code, name, secid, klines) {
     if (tracks.length === 0) {
         tracks = TRENDING_TRACKS.map((t, idx) => ({
             ...t,
-            count: 10 - idx * 2,
+            count: 5 - idx,
+            lastPlayed: Date.now() - idx * 60 * 1000,
             isPreset: true
         }));
     }
@@ -974,6 +1010,7 @@ function recordStockPlay(code, name, secid, klines) {
 
     if (track) {
         track.count = (track.count || 0) + 1;
+        track.lastPlayed = Date.now();
         // 确保使用真实的中文股票名称，而不是“自选股票 + 代码”
         if (name && name !== "未知股票" && !name.startsWith("自选股票")) {
             track.name = name;
@@ -995,6 +1032,7 @@ function recordStockPlay(code, name, secid, klines) {
             difficultyText: diffInfo.difficultyText,
             desc: `自选探索的股票赛道。已被玩过 1 次，欢迎继续挑战！`,
             count: 1,
+            lastPlayed: Date.now(),
             isPreset: false
         };
         tracks.push(track);
@@ -1041,7 +1079,16 @@ function getTrendingTracks() {
     if (saved) {
         try {
             tracks = JSON.parse(saved);
-            tracks = tracks.map(t => {
+            tracks = tracks.map((t, idx) => {
+                if (t.lastPlayed === undefined) {
+                    t.lastPlayed = Date.now() - (idx * 24 * 60 * 60 * 1000);
+                    if (t.isPreset) {
+                        const presetIdx = TRENDING_TRACKS.findIndex(pt => pt.code === t.code && pt.market === t.market);
+                        if (presetIdx !== -1) {
+                            t.count = 5 - presetIdx;
+                        }
+                    }
+                }
                 const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
                 if (preset) {
                     return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
@@ -1056,14 +1103,20 @@ function getTrendingTracks() {
     if (tracks.length === 0) {
         tracks = TRENDING_TRACKS.map((t, idx) => ({
             ...t,
-            count: 10 - idx * 2,
+            count: 5 - idx,
+            lastPlayed: Date.now() - idx * 60 * 1000,
             isPreset: true
         }));
         localStorage.setItem('stonkrider_trending_tracks', JSON.stringify(tracks));
     }
     
-    // 按 count 降序排列，取前 6 个
-    tracks.sort((a, b) => (b.count || 0) - (a.count || 0));
+    // 按 count 降序排列，若 count 相同则按 lastPlayed 降序，取前 6 个
+    tracks.sort((a, b) => {
+        if ((b.count || 0) !== (a.count || 0)) {
+            return (b.count || 0) - (a.count || 0);
+        }
+        return (b.lastPlayed || 0) - (a.lastPlayed || 0);
+    });
     return tracks.slice(0, 6);
 }
 
@@ -1102,7 +1155,16 @@ function getTrackByCode(code, secid = "") {
     if (saved) {
         try {
             tracks = JSON.parse(saved);
-            tracks = tracks.map(t => {
+            tracks = tracks.map((t, idx) => {
+                if (t.lastPlayed === undefined) {
+                    t.lastPlayed = Date.now() - (idx * 24 * 60 * 60 * 1000);
+                    if (t.isPreset) {
+                        const presetIdx = TRENDING_TRACKS.findIndex(pt => pt.code === t.code && pt.market === t.market);
+                        if (presetIdx !== -1) {
+                            t.count = 5 - presetIdx;
+                        }
+                    }
+                }
                 const preset = TRENDING_TRACKS.find(pt => pt.code === t.code && pt.market === t.market);
                 if (preset) {
                     return { ...t, secid: preset.secid, secid_full: preset.secid_full || preset.secid };
@@ -1132,8 +1194,8 @@ function drawHUDMinimap(game, ratioX) {
     const canvas = document.getElementById('hud-minimap');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.offsetWidth;
-    const h = canvas.height = canvas.offsetHeight;
+    const w = canvas.width = canvas.clientWidth || 180;
+    const h = canvas.height = canvas.clientHeight || 20;
     
     const pts = game.trackPoints;
     if (!pts || pts.length < 2) return;
@@ -1165,7 +1227,7 @@ function drawHUDMinimap(game, ratioX) {
     ctx.stroke();
     
     // 3. 绘制玩家已骑行通过的轨迹 (高亮霓虹蓝)
-    ctx.strokeStyle = 'var(--neon-cyan)';
+    ctx.strokeStyle = '#00f0ff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     const currentIdx = Math.floor(ratioX * (pts.length - 1));
